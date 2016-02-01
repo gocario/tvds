@@ -9,6 +9,7 @@
 extern "C" {
 #endif
 
+#include <3ds/services/apt.h>
 #include <3ds/services/hid.h>
 
 /**

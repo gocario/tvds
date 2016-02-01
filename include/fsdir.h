@@ -3,24 +3,11 @@
  * @file fsdir.h
  */
 
+#include "fsls.h"
+
 #include <3ds/services/fs.h>
 
-#define FS_MAX_PATH_LENGTH (0x106)
-
-/// An entry of a file or a directory.
-typedef struct fsEntry
-{
-	char name[FS_MAX_PATH_LENGTH];	///< The name as char.
-	u32 attributes : 29;			///< The attributes. (Is FS_DIRECTORY?)
-	bool isDirectory : 1;			///< If FS_DIRECTORY.
-	bool isRealDirectory : 1;		///< If FS_REAL_DIRECTORY.
-	bool isRootDirectory : 1;		///< If FS_ROOT_DIRECTORY.
-	struct fsEntry* nextEntry;		///< The next entry (linked list).
-	struct fsEntry* firstEntry;		///< The first entry (child). FS_DIRECTORY
-	u16 entryCount;					///< The count of the entries (childs). FS_DIRECTORY
-} fsEntry;
-
-/// The directory entry to readFrom, inherits from fsEntry.
+/// The directory entry to read from, inherits from fsEntry.
 typedef struct fsDir
 {
 	fsEntry entry;			///< The mother fsEntry.
@@ -55,6 +42,11 @@ void fsDirPrintSdmc(void);
 void fsDirPrintCurrent(void);
 
 /**
+ * @brief Prints the dick dir in its console.
+ */
+void fsDirPrintDick(void);
+
+/**
  * @brief Switchs the current dir.
  * @param dir The dir to switch to.
  */
@@ -76,33 +68,12 @@ void fsDirGotoParentDir(void);
  */
 void fsDirGotoSubDir(void);
 
+/**
+ * @brief Copies the current file to the other dir.
+ */
+Result fsDirCopyCurrentFile(void);
 
 /**
- * @param
- * @deprecated static only
+ * @brief Copies the current directory to the other dir.
  */
-Result fsScanDir(fsEntry* dir, FS_Archive* archive, bool rec);
-
-/**
- * @param
- * @deprecated static only
- */
-Result fsFreeDir(fsEntry* dir);
-
-/**
- * @param
- * @deprecated static only
- */
-Result fsAddParentDir(fsEntry* dir);
-
-/**
- * @param
- * @deprecated static only
- */
-Result fsGotoParentDir(fsEntry* dir);
-
-/**
- * @param
- * @deprecated static only
- */
-Result fsGotoSubDir(fsEntry* dir, char* subDir);
+Result fsDirCopyCurrentFolder(void);

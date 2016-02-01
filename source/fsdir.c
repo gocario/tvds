@@ -1,4 +1,5 @@
 #include "fsdir.h"
+#include "fsls.h"
 #include "fs.h"
 #include "console.h"
 
@@ -8,24 +9,9 @@
 #include <stdlib.h>
 #include <string.h>
 
-// #define r(format, args ...) printf(format, ##args)
-#define r(format, args ...)
-
-static inline void unicodeToChar(char* dst, u16* src, s16 max)
-{
-	if (!src || !dst) return;
-	s16 ii;
-	for (ii = 0; *src && ii < max-1; ii++) *(dst + ii) = (*(src + ii)) & 0xFF;
-	*(dst + ii) = 0x00;
-}
-
-static inline void charToUnicode(u16* dst, char* src, s16 max)
-{
-	if (!src || !dst) return;
-	s16 ii;
-	for (ii = 0; *src && ii < max-1; ii++) *(dst + ii) = *(src + ii);
-	*(dst + ii) = 0x00;
-}
+// #define r(format, args...) printf(format, ##args)
+#define r(format, args...) consoleLog(format, ##args)
+// #define r(format, args...)
 
 fsDir saveDir;
 fsDir sdmcDir;
@@ -35,6 +21,10 @@ static fsDir* dickDir;
 
 static u32 entryPrintCount = 20;
 
+static void fsDirPrint(fsDir* dir, char* data);
+static void fsDirRefreshDir(fsDir* _dir);
+static Result fsDirCopy(fsEntry* srcEntry, fsDir* srcDir, fsDir* dstDir);
+
 Result fsDirInit(void)
 {
 	Result ret;
@@ -42,7 +32,7 @@ Result fsDirInit(void)
 	memset(&saveDir, 0, sizeof(fsDir));
 	memset(&sdmcDir, 0, sizeof(fsDir));
 
-	strcpy(saveDir.entry.name, "/pk/backup/");
+	strcpy(saveDir.entry.name, "/pk/romfs/"); // TODO Replace by "/"
 	strcpy(sdmcDir.entry.name, "/");
 
 	saveDir.archive = &sdmcArchive; // TODO Remove&Uncomment
@@ -67,6 +57,7 @@ Result fsDirInit(void)
 	r(" > fsAddParentDir: %lx\n", ret);
 
 	currentDir = &sdmcDir;
+	dickDir = &saveDir;
 
 	return 0;
 }
@@ -93,7 +84,7 @@ static void fsDirPrint(fsDir* dir, char* data)
 	consoleResetColor();
 	printf("\x1B[0;0H%s data:", data);
 	consoleForegroundColor(TEAL);
-	printf("\x1B[1;0H%s", dir->entry.name);
+	printf("\x1B[1;0H%.24s", dir->entry.name);
 	consoleResetColor();
 
 	for (; next && i < dir->entry.entryCount && i < dir->entryOffsetId + entryPrintCount; i++)
@@ -110,7 +101,7 @@ static void fsDirPrint(fsDir* dir, char* data)
 			else
 				consoleForegroundColor(BLACK);
 			// Blank placeholder
-			printf("\x1B[%u;0H >                       ", row);
+			printf("\x1B[%u;0H \a                       ", row);
 		}
 		// Else if the entry is just a directory
 		else if (next->isDirectory)
@@ -144,18 +135,27 @@ void fsDirPrintCurrent(void)
 		fsDirPrintSdmc();
 }
 
+void fsDirPrintDick(void)
+{
+	if (dickDir == &saveDir)
+		fsDirPrintSave();
+	else if (dickDir == &sdmcDir)
+		fsDirPrintSdmc();
+}
+
 void fsDirSwitch(fsDir* dir)
 {
-	if (dir == NULL)
+	if ((dir == NULL && currentDir == &sdmcDir) || dir == &saveDir)
 	{
-		if (currentDir == &saveDir)
-			currentDir = &sdmcDir;
-		else if (currentDir == &sdmcDir)
-			currentDir = &saveDir;
+		consoleLog("Switched to save div\n");
+		currentDir = &saveDir;
+		dickDir = &sdmcDir;
 	}
-	else if (dir == &saveDir || dir == &sdmcDir)
+	else if ((dir == NULL && currentDir == &saveDir) || dir == &sdmcDir)
 	{
-		currentDir = dir;
+		consoleLog("Switched to sdmc div\n");
+		currentDir = &sdmcDir;
+		dickDir = &saveDir;
 	}
 }
 
@@ -196,13 +196,14 @@ void fsDirMove(s16 count)
 /**
  * @brief Refreshs the current dir (freeing and scanning it)
  */
-static void fsDirRefreshDir(void)
+static void fsDirRefreshDir(fsDir* _dir)
 {
-	fsFreeDir((fsEntry*) currentDir);
-	fsScanDir((fsEntry*) currentDir, currentDir->archive, false);
-	fsAddParentDir((fsEntry*) currentDir);
+	fsDir* dir = (_dir ? _dir : currentDir);
+	fsFreeDir((fsEntry*) dir);
+	fsScanDir((fsEntry*) dir, dir->archive, false);
+	fsAddParentDir((fsEntry*) dir);
 
-	currentDir->entrySelectedId = 0;
+	dir->entrySelectedId = 0;
 }
 
 void fsDirGotoParentDir(void)
@@ -210,7 +211,7 @@ void fsDirGotoParentDir(void)
 	if (!currentDir->entry.isRootDirectory)
 	{
 		if (fsGotoParentDir((fsEntry*) currentDir) == 0)
-			fsDirRefreshDir();
+			fsDirRefreshDir(currentDir);
 	}
 }
 
@@ -225,165 +226,74 @@ void fsDirGotoSubDir(void)
 		else if (currentDir->entrySelected->isDirectory)
 		{
 			if (fsGotoSubDir((fsEntry*) currentDir, currentDir->entrySelected->name) == 0)
-				fsDirRefreshDir();
+				fsDirRefreshDir(currentDir);
 		}
 	}
 }
 
-
-// TODO static
-Result fsScanDir(fsEntry* dir, FS_Archive* archive, bool rec)
+/**
+ * @todo comment static
+ */
+static Result fsDirCopy(fsEntry* srcEntry, fsDir* srcDir, fsDir* dstDir)
 {
-	if (!dir || !archive) return -1;
-	consoleLog("scanDir(\"%s\", %li)\n", dir->name, archive->id);
-
-	Result ret;
-	Handle dirHandle;
-
-	dir->firstEntry = NULL;
-	dir->entryCount = 0;
-
-	ret = FSUSER_OpenDirectory(&dirHandle, *archive, fsMakePath(PATH_ASCII, dir->name));
-	r(" > FSUSER_OpenDirectory: %lx\n", ret);
-	if (R_FAILED(ret)) return ret;
-
-	u32 entriesRead;
-	fsEntry* lastEntry = NULL;
-
-	do
+	if (srcEntry->isDirectory)
 	{
-		FS_DirectoryEntry dirEntry;
-		memset(&dirEntry, 0, sizeof(FS_DirectoryEntry));
-		entriesRead = 0;
+		if (!srcEntry->isRealDirectory) return 1;
 
-		ret = FSDIR_Read(dirHandle, &entriesRead, 1, &dirEntry);
-		r(" > FSDIR_Read: %lx\n", ret);
+		fsEntry srcPath;
+		// Create another fsEntry for the scan only.
+		memset(srcPath.name, 0, sizeof(fsEntry));
+		strcpy(srcPath.name, srcDir->entry.name);
+		strcat(srcPath.name, srcEntry->name);
+		srcPath.attributes = srcEntry->attributes;
+		srcPath.isDirectory = true;
+		srcPath.isRealDirectory = true;
+		srcPath.isRootDirectory = false;
 
-		if (entriesRead > 0)
-		{
-			fsEntry* entry = (fsEntry*) malloc(sizeof(fsEntry));
-			memset(entry, 0, sizeof(fsEntry));
+		char dstPath[FS_MAX_PATH_LENGTH];
+		memset(dstPath, 0, FS_MAX_PATH_LENGTH);
+		strcpy(dstPath, dstDir->entry.name);
+		strcat(dstPath, srcEntry->name);
 
-			unicodeToChar(entry->name, dirEntry.name, FS_MAX_PATH_LENGTH);
-
-			consoleLog("Entry: %s\n", entry->name);
-			
-			entry->attributes = dirEntry.attributes;
-			entry->isDirectory = entry->attributes & FS_ATTRIBUTE_DIRECTORY;
-			entry->isRealDirectory = true;
-			entry->isRootDirectory = false;
-			entry->nextEntry = NULL;
-			entry->firstEntry = NULL;
-			entry->entryCount = 0;
-
-			if (rec && entry->attributes & FS_ATTRIBUTE_DIRECTORY)
-			{
-				sprintf(entry->name, "%s/%s/", dir->name, entry->name);
-				fsScanDir(entry, archive, rec);
-				unicodeToChar(entry->name, dirEntry.name, FS_MAX_PATH_LENGTH);
-			}
-
-			if (dir->firstEntry)
-			{
-				lastEntry->nextEntry = entry;
-			}
-			else
-			{
-				dir->firstEntry = entry;
-			}
-
-			lastEntry = entry;
-
-			dir->entryCount++;
-		}
-		else if (dir->entryCount == 0)
-		{
-			consoleLog("Empty folder!\n\n");
-		}
-	} while (entriesRead > 0);
-
-	ret = FSDIR_Close(dirHandle);
-
-	return ret;
-}
-
-// TODO static
-Result fsFreeDir(fsEntry* dir)
-{
-	if (!dir) return -1;
-
-	fsEntry* line = dir->firstEntry;
-	fsEntry* next = NULL;
-
-	while (line)
-	{
-		next = line->nextEntry;
-
-		if (line->firstEntry)
-		{
-			fsFreeDir(line);
-		}
-
-		free(line);
-		line = next;
+		fsScanDir(&srcPath, srcDir->archive, false);
+		FS_CreateDirectory(srcPath.name, dstDir->archive);
+		fsFreeDir(&srcPath);
+		
+		return fsDirCopy(&srcPath, srcDir, dstDir);
 	}
-
-	dir->entryCount = 0;
-	dir->firstEntry = NULL;
-
-	return 0;
-}
-
-// TODO static
-Result fsAddParentDir(fsEntry* dir)
-{
-	// If the dir is the root directory. (no!)
-	dir->isRootDirectory = !strcmp("/", dir->name) || !strcmp("", dir->name);
+	else
+	{
+		char srcPath[FS_MAX_PATH_LENGTH];
+		char dstPath[FS_MAX_PATH_LENGTH];
 	
-	if (!dir->isRootDirectory)
-	{
-		fsEntry* root = (fsEntry*) malloc(sizeof(fsEntry));
-		memset(root, 0, sizeof(fsEntry));
+		memset(srcPath, 0, FS_MAX_PATH_LENGTH);
+		strcpy(srcPath, srcDir->entry.name);
+		strcat(srcPath, srcEntry->name);
+		// strncat(srcPath, srcEntry->name, FS_MAX_PATH_LENGTH - strlen(srcPath));
+		consoleLog("\a%s\n", srcPath);
 
-		strcpy(root->name, "..");
-		root->attributes = dir->attributes | FS_ATTRIBUTE_DIRECTORY;
-		root->isDirectory = true;
-		root->isRealDirectory = false;
-		root->isRootDirectory = false;
-		root->nextEntry = dir->firstEntry;
-		root->firstEntry = NULL;
-		root->entryCount = 0;
+		memset(dstPath, 0, FS_MAX_PATH_LENGTH);
+		strcpy(dstPath, dstDir->entry.name);
+		strcat(dstPath, srcEntry->name);
+		// strncat(dstPath, srcEntry->name, FS_MAX_PATH_LENGTH - strlen(dstPath));
+		consoleLog("\a%s\n", dstPath);
 
-		dir->firstEntry = root;
-		dir->entryCount++;
-
-		return 0;
+		return fsCopyFile(srcPath, srcDir->archive, dstPath, dstDir->archive, srcEntry->attributes, false);
 	}
 
 	return 1;
 }
 
-// TODO static
-Result fsGotoParentDir(fsEntry* dir)
+Result fsDirCopyCurrentFile(void)
 {
-	if (!dir) return -1;
-
-	char* path = dir->name;
-	char* p = path + strlen(path) - 2;
-	while (p > path && *p != '/') *p-- = '\0';
-
-	return 0;
+	Result ret = fsDirCopy(currentDir->entrySelected, currentDir, dickDir);
+	fsDirRefreshDir(dickDir);
+	return ret;
 }
 
-// TODO static
-Result fsGotoSubDir(fsEntry* dir, char* subDir)
+Result fsDirCopyCurrentFolder(void)
 {
-	if (!dir || !subDir) return -1;
-
-	char* path = dir->name;
-	path = strcat(path, subDir);
-	if (path[strlen(path+1)] != '/')
-		path = strcat(path, "/");		
-
-	return 0;
+	Result ret = fsDirCopy((fsEntry*) currentDir, currentDir, dickDir);
+	fsDirRefreshDir(dickDir);
+	return ret;
 }
