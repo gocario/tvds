@@ -55,41 +55,54 @@ void fsDirPrintSdmc(void);
 void fsDirPrintCurrent(void);
 
 /**
- * @brief Switch the current dir.
+ * @brief Switchs the current dir.
  * @param dir The dir to switch to.
  */
 void fsDirSwitch(fsDir* dir);
 
 /**
- * @brief Move the cursor dir.
+ * @brief Moves the cursor dir.
  * @param count The count to move the cursor.
  */
 void fsDirMove(s16 count);
 
+/**
+ * @brief Goes to the parent dir of the current dir.
+ */
 void fsDirGotoParentDir(void);
+
+/**
+ * @brief Goes to the sub dir of the current dir according to the selected entry name.
+ */
 void fsDirGotoSubDir(void);
+
 
 /**
  * @param
+ * @deprecated static only
  */
 Result fsScanDir(fsEntry* dir, FS_Archive* archive, bool rec);
 
 /**
  * @param
+ * @deprecated static only
  */
 Result fsFreeDir(fsEntry* dir);
 
 /**
  * @param
+ * @deprecated static only
  */
 Result fsAddParentDir(fsEntry* dir);
 
 /**
  * @param
+ * @deprecated static only
  */
 Result fsGotoParentDir(fsEntry* dir);
 
 /**
  * @param
+ * @deprecated static only
  */
 Result fsGotoSubDir(fsEntry* dir, char* subDir);

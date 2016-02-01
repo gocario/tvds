@@ -31,6 +31,7 @@ fsDir saveDir;
 fsDir sdmcDir;
 
 fsDir* currentDir;
+static fsDir* dickDir;
 
 static u32 entryPrintCount = 20;
 
@@ -44,7 +45,8 @@ Result fsDirInit(void)
 	strcpy(saveDir.entry.name, "/pk/backup/");
 	strcpy(sdmcDir.entry.name, "/");
 
-	saveDir.archive = &sdmcArchive; // TODO Change to &saveArchive
+	saveDir.archive = &sdmcArchive; // TODO Remove&Uncomment
+	// saveDir.archive = &saveArchive;
 	saveDir.entryOffsetId = 0;
 	saveDir.entrySelectedId = 0;
 	ret = fsScanDir((fsEntry*) &saveDir, saveDir.archive, false);
@@ -69,6 +71,11 @@ Result fsDirInit(void)
 	return 0;
 }
 
+/**
+ * @brief Prints a directory to the current console.
+ * @param dir The directory to print.
+ * @param data An header string to print.
+ */
 static void fsDirPrint(fsDir* dir, char* data)
 {
 	s32 i = 0;
@@ -85,9 +92,9 @@ static void fsDirPrint(fsDir* dir, char* data)
 
 	consoleResetColor();
 	printf("\x1B[0;0H%s data:", data);
-
 	consoleForegroundColor(TEAL);
 	printf("\x1B[1;0H%s", dir->entry.name);
+	consoleResetColor();
 
 	for (; next && i < dir->entry.entryCount && i < dir->entryOffsetId + entryPrintCount; i++)
 	{
@@ -186,6 +193,9 @@ void fsDirMove(s16 count)
 	// consoleLog("entryOffsetId: %i\n", currentDir->entryOffsetId);
 }
 
+/**
+ * @brief Refreshs the current dir (freeing and scanning it)
+ */
 static void fsDirRefreshDir(void)
 {
 	fsFreeDir((fsEntry*) currentDir);
@@ -221,10 +231,11 @@ void fsDirGotoSubDir(void)
 }
 
 
+// TODO static
 Result fsScanDir(fsEntry* dir, FS_Archive* archive, bool rec)
 {
 	if (!dir || !archive) return -1;
-	// printf("scanDir(\"%s\", %li)\n", dir->name, archive->id);
+	consoleLog("scanDir(\"%s\", %li)\n", dir->name, archive->id);
 
 	Result ret;
 	Handle dirHandle;
@@ -255,10 +266,10 @@ Result fsScanDir(fsEntry* dir, FS_Archive* archive, bool rec)
 
 			unicodeToChar(entry->name, dirEntry.name, FS_MAX_PATH_LENGTH);
 
-			// printf("Entry: %s\n", entry->name);
+			consoleLog("Entry: %s\n", entry->name);
 			
 			entry->attributes = dirEntry.attributes;
-			entry->isDirectory = (entry->attributes & FS_ATTRIBUTE_DIRECTORY) == 1;
+			entry->isDirectory = entry->attributes & FS_ATTRIBUTE_DIRECTORY;
 			entry->isRealDirectory = true;
 			entry->isRootDirectory = false;
 			entry->nextEntry = NULL;
@@ -287,7 +298,7 @@ Result fsScanDir(fsEntry* dir, FS_Archive* archive, bool rec)
 		}
 		else if (dir->entryCount == 0)
 		{
-			// printf("Empty folder!\n\n");
+			consoleLog("Empty folder!\n\n");
 		}
 	} while (entriesRead > 0);
 
@@ -296,6 +307,7 @@ Result fsScanDir(fsEntry* dir, FS_Archive* archive, bool rec)
 	return ret;
 }
 
+// TODO static
 Result fsFreeDir(fsEntry* dir)
 {
 	if (!dir) return -1;
@@ -322,10 +334,12 @@ Result fsFreeDir(fsEntry* dir)
 	return 0;
 }
 
+// TODO static
 Result fsAddParentDir(fsEntry* dir)
 {
 	// If the dir is the root directory. (no!)
 	dir->isRootDirectory = !strcmp("/", dir->name) || !strcmp("", dir->name);
+	
 	if (!dir->isRootDirectory)
 	{
 		fsEntry* root = (fsEntry*) malloc(sizeof(fsEntry));
@@ -345,9 +359,11 @@ Result fsAddParentDir(fsEntry* dir)
 
 		return 0;
 	}
+
 	return 1;
 }
 
+// TODO static
 Result fsGotoParentDir(fsEntry* dir)
 {
 	if (!dir) return -1;
@@ -359,6 +375,7 @@ Result fsGotoParentDir(fsEntry* dir)
 	return 0;
 }
 
+// TODO static
 Result fsGotoSubDir(fsEntry* dir, char* subDir)
 {
 	if (!dir || !subDir) return -1;
