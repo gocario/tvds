@@ -61,17 +61,24 @@ void fsDirMove(s16 count);
 /**
  * @brief Goes to the parent dir of the current dir.
  */
-void fsDirGotoParentDir(void);
+Result fsDirGotoParentDir(void);
 
 /**
  * @brief Goes to the sub dir of the current dir according to the selected entry name.
  */
-void fsDirGotoSubDir(void);
+Result fsDirGotoSubDir(void);
 
 /**
  * @brief Copies the current file to the other dir.
+ * @see fsDirCopyCurrentFileOverwrite(void)
  */
 Result fsDirCopyCurrentFile(void);
+
+/**
+ * @brief Overwrites the current file to the other dir.
+ * @see fsDirCopyCurrentFile(void)
+ */
+Result fsDirCopyCurrentFileOverwrite(void);
 
 /**
  * @brief Copies the current directory to the other dir.

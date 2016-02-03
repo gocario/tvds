@@ -23,7 +23,7 @@ static u32 entryPrintCount = 20;
 
 static void fsDirPrint(fsDir* dir, char* data);
 static void fsDirRefreshDir(fsDir* _dir);
-static Result fsDirCopy(fsEntry* srcEntry, fsDir* srcDir, fsDir* dstDir);
+static Result fsDirCopy(fsEntry* srcEntry, fsDir* srcDir, fsDir* dstDir, bool overwrite);
 
 Result fsDirInit(void)
 {
@@ -39,21 +39,21 @@ Result fsDirInit(void)
 	// saveDir.archive = &saveArchive;
 	saveDir.entryOffsetId = 0;
 	saveDir.entrySelectedId = 0;
-	ret = fsScanDir((fsEntry*) &saveDir, saveDir.archive, false);
+	ret = fsScanDir(&saveDir.entry, saveDir.archive, false);
 	r(" > fsScanDir: %lx\n", ret);
 	if (R_FAILED(ret)) return ret;
 
-	ret = fsAddParentDir((fsEntry*) &saveDir);
+	ret = fsAddParentDir(&saveDir.entry);
 	r(" > fsAddParentDir: %lx\n", ret);
 
 	sdmcDir.archive = &sdmcArchive;
 	sdmcDir.entryOffsetId = 0;
 	sdmcDir.entrySelectedId = 0;
-	ret = fsScanDir((fsEntry*) &sdmcDir, sdmcDir.archive, false);
+	ret = fsScanDir(&sdmcDir.entry, sdmcDir.archive, false);
 	r(" > fsScanDir: %lx\n", ret);
 	if (R_FAILED(ret)) return ret;
 
-	ret = fsAddParentDir((fsEntry*) &sdmcDir);
+	ret = fsAddParentDir(&sdmcDir.entry);
 	r(" > fsAddParentDir: %lx\n", ret);
 
 	currentDir = &sdmcDir;
@@ -199,42 +199,46 @@ void fsDirMove(s16 count)
 static void fsDirRefreshDir(fsDir* _dir)
 {
 	fsDir* dir = (_dir ? _dir : currentDir);
-	fsFreeDir((fsEntry*) dir);
-	fsScanDir((fsEntry*) dir, dir->archive, false);
-	fsAddParentDir((fsEntry*) dir);
+	fsFreeDir(&dir->entry);
+	fsScanDir(&dir->entry, dir->archive, false);
+	fsAddParentDir(&dir->entry);
 
 	dir->entrySelectedId = 0;
 }
 
-void fsDirGotoParentDir(void)
+Result fsDirGotoParentDir(void)
 {
+	Result ret = 1;
 	if (!currentDir->entry.isRootDirectory)
 	{
-		if (fsGotoParentDir((fsEntry*) currentDir) == 0)
-			fsDirRefreshDir(currentDir);
+		ret = fsGotoParentDir(&currentDir->entry);
+		if (ret == 0) fsDirRefreshDir(currentDir);
 	}
+	return ret;
 }
 
-void fsDirGotoSubDir(void)
+Result fsDirGotoSubDir(void)
 {
+	Result ret = 1;
 	if (currentDir->entrySelected)
 	{
 		if (!currentDir->entrySelected->isRealDirectory)
 		{
-			fsDirGotoParentDir();
+			ret = fsDirGotoParentDir();
 		}
 		else if (currentDir->entrySelected->isDirectory)
 		{
-			if (fsGotoSubDir((fsEntry*) currentDir, currentDir->entrySelected->name) == 0)
-				fsDirRefreshDir(currentDir);
+			Result ret = fsGotoSubDir(&currentDir->entry, currentDir->entrySelected->name);
+			if (ret == 0) fsDirRefreshDir(currentDir);
 		}
 	}
+	return ret;
 }
 
 /**
  * @todo comment static
  */
-static Result fsDirCopy(fsEntry* srcEntry, fsDir* srcDir, fsDir* dstDir)
+static Result fsDirCopy(fsEntry* srcEntry, fsDir* srcDir, fsDir* dstDir, bool overwrite)
 {
 	if (srcEntry->isDirectory)
 	{
@@ -259,7 +263,8 @@ static Result fsDirCopy(fsEntry* srcEntry, fsDir* srcDir, fsDir* dstDir)
 		FS_CreateDirectory(srcPath.name, dstDir->archive);
 		fsFreeDir(&srcPath);
 		
-		return fsDirCopy(&srcPath, srcDir, dstDir);
+		// ASK Do it recursively or do it for only one folder (and sub's)?
+		return fsDirCopy(&srcPath, srcDir, dstDir, overwrite);
 	}
 	else
 	{
@@ -278,7 +283,7 @@ static Result fsDirCopy(fsEntry* srcEntry, fsDir* srcDir, fsDir* dstDir)
 		// strncat(dstPath, srcEntry->name, FS_MAX_PATH_LENGTH - strlen(dstPath));
 		consoleLog("\a%s\n", dstPath);
 
-		return fsCopyFile(srcPath, srcDir->archive, dstPath, dstDir->archive, srcEntry->attributes, false);
+		return fsCopyFile(srcPath, srcDir->archive, dstPath, dstDir->archive, srcEntry->attributes, overwrite);
 	}
 
 	return 1;
@@ -286,14 +291,21 @@ static Result fsDirCopy(fsEntry* srcEntry, fsDir* srcDir, fsDir* dstDir)
 
 Result fsDirCopyCurrentFile(void)
 {
-	Result ret = fsDirCopy(currentDir->entrySelected, currentDir, dickDir);
+	Result ret = fsDirCopy(currentDir->entrySelected, currentDir, dickDir, false);
+	fsDirRefreshDir(dickDir);
+	return ret;
+}
+
+Result fsDirCopyCurrentFileOverwrite(void)
+{
+	Result ret = fsDirCopy(currentDir->entrySelected, currentDir, dickDir, true);
 	fsDirRefreshDir(dickDir);
 	return ret;
 }
 
 Result fsDirCopyCurrentFolder(void)
 {
-	Result ret = fsDirCopy((fsEntry*) currentDir, currentDir, dickDir);
+	Result ret = fsDirCopy(&currentDir->entry, currentDir, dickDir, false);
 	fsDirRefreshDir(dickDir);
 	return ret;
 }

@@ -9,7 +9,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define r(format, args...) consoleLog(format, ##args)
+// #define r(format, args...) consoleLog(format, ##args)
+#define r(format, args...)
 
 Result fsCopyFile(char* srcPath, FS_Archive* srcArchive, char* dstPath, FS_Archive* dstArchive, u32 attributes, bool overwrite)
 {

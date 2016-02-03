@@ -10,9 +10,10 @@
 #include "console.h"
 
 typedef enum {
-	STATE_EOF,		///< End of file
-	STATE_ERROR,	///< Error
-	STATE_BROWSE,	///< Browse the dir
+	STATE_EOF,			///< End of file
+	STATE_ERROR,		///< Error
+	STATE_BROWSE,		///< Browse the dir
+	STATE_OW_CONFIRM,	///< Overwrite confirmation
 } State;
 
 static State state;
@@ -106,22 +107,53 @@ int main(int argc, char* argv[])
 				if (kDown & KEY_A)
 				{
 					consoleLog("Opening -> %s\n", currentDir->entrySelected->name);
-					fsDirGotoSubDir();
-					fsDirPrintCurrent();
+					ret = fsDirGotoSubDir();
+					consoleLog("   > fsfDirGotoSubDir: %lx\n", ret);
+					fsDirPrintCurrent();						
 				}
 
 				if (kDown & KEY_B)
 				{
-					fsDirGotoParentDir();
+					ret = fsDirGotoParentDir();
+					consoleLog("   > fsDirGotoParentDir: %lx\n", ret);
 					fsDirPrintCurrent();
 				}
 
 				if (kDown & KEY_Y)
 				{
-					fsDirCopyCurrentFile();
+					ret = fsDirCopyCurrentFile();
+					consoleLog("   > fsDirCopyCurrentFile: %lx\n", ret);
+					if (ret == FS_OVERWRITE)
+					{
+						consoleLog("File already exist!\n");
+						consoleLog("Press SELECT to overwrite it!\n");
+						state = STATE_OW_CONFIRM;
+					}
 					fsDirPrintDick();
 				}
 
+				break;
+			}
+			case STATE_OW_CONFIRM:
+			{
+				if (kDown)
+				{
+					if (kDown & KEY_SELECT)
+					{
+						consoleLog("Overwriting file!\n");
+						ret = fsDirCopyCurrentFileOverwrite();
+						consoleLog("   > fsDirCopyCurrentFileOverwrite: %lx\n", ret);
+						fsDirPrintDick();
+
+						state = STATE_BROWSE;
+					}
+					else
+					{
+						consoleLog("Overwrite cancelled!\n");
+
+						state = STATE_BROWSE;
+					}
+				}
 				break;
 			}
 			case STATE_ERROR:
