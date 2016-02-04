@@ -11,6 +11,7 @@ extern "C" {
 
 #include <3ds/services/apt.h>
 #include <3ds/services/hid.h>
+#include <3ds/services/gspgpu.h>
 
 /**
  * @brief Key value.
@@ -28,6 +29,7 @@ inline void waitKey(u32 key)
 {
 	while (aptMainLoop())
 	{
+		gspWaitForVBlank();
 		hidScanInput();
 		if (hidKeysDown() & key) break;
 	}
