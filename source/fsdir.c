@@ -9,7 +9,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-// #define r(format, args...) printf(format, ##args)
 #define r(format, args...) consoleLog(format, ##args)
 // #define r(format, args...)
 
@@ -84,7 +83,7 @@ static void fsDirPrint(fsDir* dir, char* data)
 	consoleResetColor();
 	printf("\x1B[0;0H%s data:", data);
 	consoleForegroundColor(TEAL);
-	printf("\x1B[1;0H%.24s", dir->entry.name);
+	printf("\x1B[1;0H%.25s", dir->entry.name);
 	consoleResetColor();
 
 	for (; next && i < dir->entry.entryCount && i < dir->entryOffsetId + entryPrintCount; i++)

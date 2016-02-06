@@ -85,6 +85,8 @@ Result fsScanDir(fsEntry* dir, FS_Archive* archive, bool rec)
 	u32 entriesRead;
 	fsEntry* lastEntry = NULL;
 
+	bool alphasort = true;
+
 	do
 	{
 		FS_DirectoryEntry dirEntry;
@@ -101,7 +103,7 @@ Result fsScanDir(fsEntry* dir, FS_Archive* archive, bool rec)
 
 			unicodeToChar(entry->name, dirEntry.name, FS_MAX_FPATH_LENGTH);
 
-			consoleLog("Entry: %s\n", entry->name);
+			consoleLog("Entry: %s (%i)\n", entry->name, dir->entryCount+1);
 			
 			entry->attributes = dirEntry.attributes;
 			entry->isDirectory = entry->attributes & FS_ATTRIBUTE_DIRECTORY;
@@ -118,18 +120,72 @@ Result fsScanDir(fsEntry* dir, FS_Archive* archive, bool rec)
 				unicodeToChar(entry->name, dirEntry.name, FS_MAX_FPATH_LENGTH);
 			}
 
+			/** Add the entry to the list ** START **/
+
+			// Set the next entries
 			if (dir->firstEntry)
 			{
-				lastEntry->nextEntry = entry;
+				
+				if (alphasort)
+				{
+					fsEntry* tmpPrevEntry = dir->firstEntry;
+					fsEntry* tmpNextEntry = dir->firstEntry;
+
+					while (tmpNextEntry && tmpPrevEntry)
+					{
+						if (entry->isDirectory != tmpNextEntry->isDirectory)
+						{
+							if (entry->isDirectory)
+							{
+								entry->nextEntry = tmpPrevEntry->nextEntry;
+								tmpPrevEntry->nextEntry = entry;
+
+								tmpPrevEntry = NULL;
+							}
+							else
+							{
+								tmpPrevEntry = tmpNextEntry;
+								tmpNextEntry = tmpPrevEntry->nextEntry;
+							}
+						}
+						else if (strcmp(entry->name, tmpNextEntry->name) < 0)
+						{
+							entry->nextEntry = tmpPrevEntry->nextEntry;
+							tmpPrevEntry->nextEntry = entry;
+
+							tmpPrevEntry = NULL;
+						}
+						else
+						{
+							tmpPrevEntry = tmpNextEntry;
+							tmpNextEntry = tmpPrevEntry->nextEntry;
+						}
+					}
+
+					// Append the entry to the end if eof
+					if (tmpPrevEntry)
+					{
+						tmpPrevEntry->nextEntry = entry;
+						entry->nextEntry = tmpNextEntry;
+					}
+				}
+				else
+				{
+					// Append the entry to the end LAST_ENTRY
+					lastEntry->nextEntry = entry;
+					lastEntry = entry;
+				}
 			}
+			// Set the first entry
 			else
 			{
 				dir->firstEntry = entry;
+				lastEntry = entry;
 			}
 
-			lastEntry = entry;
-
 			dir->entryCount++;
+
+			/** Add the next entry to the list ** END **/
 		}
 		else if (dir->entryCount == 0)
 		{
