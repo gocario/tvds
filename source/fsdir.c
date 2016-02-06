@@ -31,8 +31,8 @@ Result fsDirInit(void)
 	memset(&saveDir, 0, sizeof(fsDir));
 	memset(&sdmcDir, 0, sizeof(fsDir));
 
-	strcpy(saveDir.entry.name, "/pk/romfs/"); // TODO Replace by "/"
-	strcpy(sdmcDir.entry.name, "/");
+	strcpy(saveDir.entry.name, "/"); // TODO Replace by "/"
+	strcpy(sdmcDir.entry.name, "/"); // TODO Replace by "/"
 
 	saveDir.archive = &sdmcArchive; // TODO Remove&Uncomment
 	// saveDir.archive = &saveArchive;
@@ -187,9 +187,6 @@ void fsDirMove(s16 count)
 		currentDir->entryOffsetId = (currentDir->entrySelectedId < currentDir->entry.entryCount-1 ?
 			currentDir->entrySelectedId+1 : currentDir->entrySelectedId) - entryPrintCount+1;
 	}
-
-	// consoleLog("entrySelectedId: %i\n", currentDir->entrySelectedId);
-	// consoleLog("entryOffsetId: %i\n", currentDir->entryOffsetId);
 }
 
 /**
@@ -243,27 +240,43 @@ static Result fsDirCopy(fsEntry* srcEntry, fsDir* srcDir, fsDir* dstDir, bool ov
 	{
 		if (!srcEntry->isRealDirectory) return 1;
 
+		// TODO Implements rec copy for folders
+
+		return 1;
+
 		fsEntry srcPath;
 		// Create another fsEntry for the scan only.
-		memset(srcPath.name, 0, sizeof(fsEntry));
-		strcpy(srcPath.name, srcDir->entry.name);
-		strcat(srcPath.name, srcEntry->name);
 		srcPath.attributes = srcEntry->attributes;
 		srcPath.isDirectory = true;
 		srcPath.isRealDirectory = true;
-		srcPath.isRootDirectory = false;
+		srcPath.isRootDirectory = !(strcmp("/", srcEntry->name));
 
-		char dstPath[FS_MAX_PATH_LENGTH];
-		memset(dstPath, 0, FS_MAX_PATH_LENGTH);
-		strcpy(dstPath, dstDir->entry.name);
-		strcat(dstPath, srcEntry->name);
+		memset(srcPath.name, 0, sizeof(fsEntry));
+		strcpy(srcPath.name, dstDir->entry.name);
+		strcat(srcPath.name, srcEntry->name);
+		consoleLog("\a%s\n", srcPath.name);
+
+		FS_CreateDirectory(srcPath.name, dstDir->archive);
 
 		fsScanDir(&srcPath, srcDir->archive, false);
-		FS_CreateDirectory(srcPath.name, dstDir->archive);
+		fsEntry* next = srcPath.firstEntry;
+
+		while (next)
+		{
+			memset(srcPath.name, 0, sizeof(fsEntry));
+			strcat(srcPath.name, srcEntry->name);
+			strcat(srcPath.name, "/");
+			strcat(srcPath.name, next->name);
+			consoleLog("\a%s\n", srcPath.name);
+
+			fsDirCopy(&srcPath, srcDir, dstDir, overwrite);
+
+			next = next->nextEntry;
+		}
+
 		fsFreeDir(&srcPath);
-		
-		// ASK Do it recursively or do it for only one folder (and sub's)?
-		return fsDirCopy(&srcPath, srcDir, dstDir, overwrite);
+
+		return 1;
 	}
 	else
 	{

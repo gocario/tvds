@@ -14,7 +14,6 @@
 
 Result fsCopyFile(char* srcPath, FS_Archive* srcArchive, char* dstPath, FS_Archive* dstArchive, u32 attributes, bool overwrite)
 {
-	consoleSelect(&logConsole); consoleClear(); consoleSelectDefault(); // TODO REMOVE
 	Result ret;
 	Handle srcHandle, dstHandle;
 
@@ -125,7 +124,6 @@ Result fsScanDir(fsEntry* dir, FS_Archive* archive, bool rec)
 			// Set the next entries
 			if (dir->firstEntry)
 			{
-				
 				if (alphasort)
 				{
 					fsEntry* tmpPrevEntry = dir->firstEntry;
@@ -231,6 +229,9 @@ Result fsAddParentDir(fsEntry* dir)
 	
 	if (!dir->isRootDirectory)
 	{
+		if (dir->firstEntry && !dir->firstEntry->isRealDirectory)
+			return 2;
+		
 		fsEntry* root = (fsEntry*) malloc(sizeof(fsEntry));
 		memset(root, 0, sizeof(fsEntry));
 
