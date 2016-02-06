@@ -15,9 +15,9 @@ extern "C" {
 /// The data of a user savedata archive's lowpath.
 typedef struct
 {
-	u32 mediatype; 	///< The mediatype of the FS_Path.
-	u32 lowid; 		///< The lower word of the saveid.
-	u32 highid; 	///< The upper word of the saveid.
+	u32 mediatype;	///< The mediatype of the FS_Path.
+	u32 lowid;		///< The lower word of the saveid.
+	u32 highid;		///< The upper word of the saveid.
 } FS_UserSaveData_LowPathData;
 
 /// Attribute flags extended.
@@ -28,19 +28,6 @@ enum
 
 extern FS_Archive sdmcArchive;
 extern FS_Archive saveArchive;
-
-/**
- * @brief Returns true if FS is initialized.
- * @return Whether FS is initialized.
- */
-bool FS_IsInitialized(void);
-
-/**
- * @brief Returns true if the archive is initialized.
- * @return Whether the archive id is initialized.
- * @deprecated @useless
- */
-bool FS_IsArchiveInitialized(FS_Archive* archive);
 
 /**
  * @brief Reads a file (path) to dst.

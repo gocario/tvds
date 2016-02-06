@@ -12,23 +12,15 @@
 #define DEBUG_FIX_ARCHIVE_FS
 
 #ifdef DEBUG_FS
-#include <stdio.h>
-#define r(format, args ...) printf(format, ##args)
-#define debug_print(fmt, args ...) printf(fmt, ##args)
+#include "console.h"
+#define r(format, args ...) consoleLog(format, ##args)
+#define debug_print(fmt, args ...) consoleLog(fmt, ##args)
 #else
 #define r(format, args ...)
 #define debug_print(fmt, args ...)
 #endif
 
-typedef enum {
-	STATE_UNINITIALIZED,
-	STATE_UNINITIALIZING,
-	STATE_INITIALIZING,
-	STATE_INITIALIZED,
-} FS_State;
-
 static Handle fsHandle;
-static FS_State fsState = STATE_UNINITIALIZED;
 static bool sdmcInitialized = false;
 static bool saveInitialized = false;
 FS_Archive sdmcArchive;
@@ -58,21 +50,6 @@ static bool FS_FixBasicArchive(FS_Archive** archive)
 	return (*archive != NULL);
 }
 #endif
-
-
-bool FS_IsInitialized(void)
-{
-	return (fsState == STATE_INITIALIZED);
-	// return (sdmcInitialize && saveInitialized);
-}
-
-
-bool FS_IsArchiveInitialized(FS_Archive* archive)
-{
-	return (archive->id == ARCHIVE_SDMC && sdmcInitialized)
-		|| (archive->id == ARCHIVE_SAVEDATA && saveInitialized);
-}
-
 
 Result FS_ReadFile(char* path, void* dst, FS_Archive* archive, u64 maxSize, u32* bytesRead)
 {
@@ -109,7 +86,6 @@ Result FS_ReadFile(char* path, void* dst, FS_Archive* archive, u64 maxSize, u32*
 	return ret;
 }
 
-
 Result FS_WriteFile(char* path, void* src, u64 size, FS_Archive* archive, u32* bytesWritten)
 {
 	if (!path || !src || !archive) return -1;
@@ -140,7 +116,6 @@ Result FS_WriteFile(char* path, void* src, u64 size, FS_Archive* archive, u32* b
 	return ret;
 }
 
-
 Result FS_DeleteFile(char* path, FS_Archive* archive)
 {
 	if (!path || !archive) return -1;
@@ -158,7 +133,6 @@ Result FS_DeleteFile(char* path, FS_Archive* archive)
 
 	return ret;
 }
-
 
 Result FS_CreateDirectory(char* path, FS_Archive* archive)
 {
@@ -178,7 +152,6 @@ Result FS_CreateDirectory(char* path, FS_Archive* archive)
 	return ret;
 }
 
-
 Result FS_CommitArchive(FS_Archive* archive)
 {
 	Result ret = 0;
@@ -194,11 +167,9 @@ Result FS_CommitArchive(FS_Archive* archive)
 	return ret;
 }
 
-
 Result FS_fsInit(void)
 {
 	Result ret = 0;
-	fsState = STATE_INITIALIZING;
 
 	debug_print("FS_fsInit:\n");
 
@@ -233,19 +204,12 @@ Result FS_fsInit(void)
 		saveInitialized = R_SUCCEEDED(ret);
 	}
 
-	if (sdmcInitialized && saveInitialized)
-	{
-		fsState = STATE_INITIALIZED;
-	}
-
 	return ret;
 }
-
 
 Result FS_fsExit(void)
 {
 	Result ret = 0;
-	fsState = STATE_UNINITIALIZING;
 	
 	debug_print("FS_fsExit:\n");
 
@@ -271,11 +235,6 @@ Result FS_fsExit(void)
 
 	ret = svcCloseHandle(fsHandle);
 	r(" > svcCloseHandle: %lx\n", ret);
-
-	if (!sdmcInitialized && !saveInitialized)
-	{
-		fsState = STATE_UNINITIALIZED;
-	}
 
 	return ret;
 }
