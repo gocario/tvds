@@ -69,6 +69,32 @@ int main(int argc, char* argv[])
 
 		switch (state)
 		{
+			case STATE_OW_CONFIRM:
+			{
+				if (kDown)
+				{
+					if (kDown & KEY_SELECT)
+					{
+						consoleLog("Overwriting file!\n");
+						ret = fsDirCopyCurrentFileOverwrite();
+						consoleLog("   > fsDirCopyCurrentFileOverwrite: %lx\n", ret);
+						fsDirPrintDick();
+
+						state = STATE_BROWSE;
+						break;
+					}
+					else
+					{
+						consoleLog("Overwrite cancelled!\n");
+
+						state = STATE_BROWSE;
+					}
+				}
+				else
+				{
+					break;
+				}
+			}
 			case STATE_BROWSE:
 			{
 				if (kDown & (KEY_LEFT | KEY_RIGHT))
@@ -132,28 +158,6 @@ int main(int argc, char* argv[])
 					fsDirPrintDick();
 				}
 
-				break;
-			}
-			case STATE_OW_CONFIRM:
-			{
-				if (kDown)
-				{
-					if (kDown & KEY_SELECT)
-					{
-						consoleLog("Overwriting file!\n");
-						ret = fsDirCopyCurrentFileOverwrite();
-						consoleLog("   > fsDirCopyCurrentFileOverwrite: %lx\n", ret);
-						fsDirPrintDick();
-
-						state = STATE_BROWSE;
-					}
-					else
-					{
-						consoleLog("Overwrite cancelled!\n");
-
-						state = STATE_BROWSE;
-					}
-				}
 				break;
 			}
 			case STATE_ERROR:
