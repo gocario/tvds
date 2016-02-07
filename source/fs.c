@@ -8,10 +8,9 @@
 
 #include <string.h>
 
-// #define DEBUG_FS
-#define DEBUG_FIX_ARCHIVE_FS
+// #define FS_DEBUG
 
-#ifdef DEBUG_FS
+#ifdef FS_DEBUG
 #include "console.h"
 #define r(format, args ...) consoleLog(format, ##args)
 #define debug_print(fmt, args ...) consoleLog(fmt, ##args)
@@ -26,14 +25,10 @@ static bool saveInitialized = false;
 FS_Archive sdmcArchive;
 FS_Archive saveArchive;
 
-#ifdef DEBUG_FIX_ARCHIVE_FS
-/**
- * @brief Redirect the saveArchive to the sdmcArchive for #Citra use
- * @return Whether the archive fix is working.
- */
-static bool FS_FixBasicArchive(FS_Archive** archive)
+#ifdef FS_DEBUG_FIX_ARCHIVE
+bool FSDEBUG_FixArchive(FS_Archive** archive)
 {
-	debug_print("FS_FixBasicArchive:\n");
+	debug_print("FSDEBUG_FixArchive:\n");
 
 	if (!saveInitialized && *archive == &saveArchive)
 	{
@@ -55,8 +50,8 @@ Result FS_ReadFile(char* path, void* dst, FS_Archive* archive, u64 maxSize, u32*
 {
 	if (!path || !dst || !archive) return -1;
 	
-#ifdef DEBUG_FIX_ARCHIVE_FS
-	if (!FS_FixBasicArchive(&archive)) return -1;
+#ifdef FS_DEBUG_FIX_ARCHIVE
+	if (!FSDEBUG_FixArchive(&archive)) return -1;
 #endif
 
 	Result ret;
@@ -90,8 +85,8 @@ Result FS_WriteFile(char* path, void* src, u64 size, FS_Archive* archive, u32* b
 {
 	if (!path || !src || !archive) return -1;
 
-#ifdef DEBUG_FIX_ARCHIVE_FS
-	if (!FS_FixBasicArchive(&archive)) return -1;
+#ifdef FS_DEBUG_FIX_ARCHIVE
+	if (!FSDEBUG_FixArchive(&archive)) return -1;
 #endif
 
 	Result ret;
@@ -120,8 +115,8 @@ Result FS_DeleteFile(char* path, FS_Archive* archive)
 {
 	if (!path || !archive) return -1;
 	
-#ifdef DEBUG_FIX_ARCHIVE_FS
-	if (!FS_FixBasicArchive(&archive)) return -1;
+#ifdef FS_DEBUG_FIX_ARCHIVE
+	if (!FSDEBUG_FixArchive(&archive)) return -1;
 #endif
 
 	Result ret;
@@ -138,8 +133,8 @@ Result FS_CreateDirectory(char* path, FS_Archive* archive)
 {
 	if (!path || !archive) return -1;
 	
-#ifdef DEBUG_FIX_ARCHIVE_FS
-	if (!FS_FixBasicArchive(&archive)) return -1;
+#ifdef FS_DEBUG_FIX_ARCHIVE
+	if (!FSDEBUG_FixArchive(&archive)) return -1;
 #endif
 
 	Result ret;
@@ -154,24 +149,21 @@ Result FS_CreateDirectory(char* path, FS_Archive* archive)
 
 Result FS_CommitArchive(FS_Archive* archive)
 {
-	Result ret = 0;
+	Result ret;
 
 	debug_print("FS_CommitArchive:\n");
 
-	if (saveInitialized)
-	{
-		ret = FSUSER_ControlArchive(*archive, ARCHIVE_ACTION_COMMIT_SAVE_DATA, NULL, 0, NULL, 0);
-		r(" > FSUSER_ControlArchive: %lx\n", ret);
-	}
+	ret = FSUSER_ControlArchive(*archive, ARCHIVE_ACTION_COMMIT_SAVE_DATA, NULL, 0, NULL, 0);
+	r(" > FSUSER_ControlArchive: %lx\n", ret);
 
 	return ret;
 }
 
-Result FS_fsInit(void)
+Result FS_Init(void)
 {
 	Result ret = 0;
 
-	debug_print("FS_fsInit:\n");
+	debug_print("FS_Init:\n");
 
 	ret = srvGetServiceHandleDirect(&fsHandle, "fs:USER");
 	r(" > srvGetServiceHandleDirect: %lx\n", ret);
@@ -207,16 +199,17 @@ Result FS_fsInit(void)
 	return ret;
 }
 
-Result FS_fsExit(void)
+Result FS_Exit(void)
 {
 	Result ret = 0;
 	
-	debug_print("FS_fsExit:\n");
+	debug_print("FS_Exit:\n");
 
 	if (sdmcInitialized)
 	{
 		ret = FSUSER_CloseArchive(&sdmcArchive);
 		r(" > FSUSER_CloseArchive: %lx\n", ret);
+
 		sdmcInitialized = false;
 	}
 
@@ -227,6 +220,7 @@ Result FS_fsExit(void)
 
 		ret = FSUSER_CloseArchive(&saveArchive);
 		r(" > FSUSER_CloseArchive: %lx\n", ret);
+
 		saveInitialized = false;
 	}
 

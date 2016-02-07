@@ -29,6 +29,15 @@ enum
 extern FS_Archive sdmcArchive;
 extern FS_Archive saveArchive;
 
+#define FS_DEBUG_FIX_ARCHIVE
+#ifdef FS_DEBUG_FIX_ARCHIVE
+/**
+ * @brief Redirect the saveArchive to the sdmcArchive for #Citra use
+ * @return Whether the archive fix is working.
+ */
+bool FSDEBUG_FixArchive(FS_Archive** archive);
+#endif
+
 /**
  * @brief Reads a file (path) to dst.
  * @param path The path of the file to read.
@@ -36,7 +45,6 @@ extern FS_Archive saveArchive;
  * @param archive The archive where the file is located.
  * @param maxSize The maximum size of the file.
  * @param bytesRead The total of read bytes.
- * @return The error encountered.
  */
 Result FS_ReadFile(char* path, void* dst, FS_Archive* archive, u64 maxSize, u32* bytesRead);
 
@@ -47,7 +55,6 @@ Result FS_ReadFile(char* path, void* dst, FS_Archive* archive, u64 maxSize, u32*
  * @param size The size of bytes to write.
  * @param archive The archive where the file is located.
  * @param bytesWritten The total of written bytes.
- * @return The error encountered.
  */
 Result FS_WriteFile(char* path, void* src, u64 size, FS_Archive* archive, u32* bytesWritten);
 
@@ -55,7 +62,6 @@ Result FS_WriteFile(char* path, void* src, u64 size, FS_Archive* archive, u32* b
  * @brief Deletes a file (path).
  * @param path The path of the file to delete.
  * @param archive The archive where the file is located.
- * @return The error encountered.
  */
 Result FS_DeleteFile(char* path, FS_Archive* archive);
 
@@ -63,28 +69,24 @@ Result FS_DeleteFile(char* path, FS_Archive* archive);
  * @brief Creates a directory (path).
  * @param path The path of the directory to create.
  * @param archive The archive where the directory will be located.
- * @return The error encountered.
  */
 Result FS_CreateDirectory(char* path, FS_Archive* archive);
 
 /**
  * @brief Commits an archive.
  * @param The archive to commit.
- * @return The error encountered.
  */
 Result FS_CommitArchive(FS_Archive* archive);
 
 /**
  * @brief Initializes the filesystem service.
- * @return The error encountered.
  */
-Result FS_fsInit(void);
+Result FS_Init(void);
 
 /**
  * @brief Exits the filesystem service.
- * @return The error encountered.
  */
-Result FS_fsExit(void);
+Result FS_Exit(void);
 
 #ifdef __cplusplus
 }

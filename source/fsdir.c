@@ -34,8 +34,8 @@ Result fsDirInit(void)
 	strcpy(saveDir.entry.name, "/"); // TODO Replace by "/"
 	strcpy(sdmcDir.entry.name, "/"); // TODO Replace by "/"
 
-	saveDir.archive = &sdmcArchive; // TODO Remove&Uncomment
-	// saveDir.archive = &saveArchive;
+	// saveDir.archive = &sdmcArchive; // TODO Remove&Uncomment
+	saveDir.archive = &saveArchive;
 	saveDir.entryOffsetId = 0;
 	saveDir.entrySelectedId = 0;
 	ret = fsScanDir(&saveDir.entry, saveDir.archive, false);

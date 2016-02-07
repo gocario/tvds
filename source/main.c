@@ -27,11 +27,12 @@ int main(int argc, char* argv[])
 	u64 titleId;
 	state = STATE_BROWSE;
 
-	ret = FS_fsInit();
+	ret = FS_Init();
 	if (R_FAILED(ret))
 	{
 		consoleLog("\nFS not fully initialized!\n");
 		consoleLog("Have you selected a title?\n\n");
+		printf("\nError code: %lx\n", ret);
 		// state = STATE_ERROR;
 	}
 
@@ -39,6 +40,7 @@ int main(int argc, char* argv[])
 	if (R_FAILED(ret))
 	{
 		printf("\nSave module not initialized!\n");
+		printf("\nError code: %lx\n", ret);
 		// state = BACKUP_ERROR;
 	}
 
@@ -46,6 +48,7 @@ int main(int argc, char* argv[])
 	if (R_FAILED(ret))
 	{
 		printf("\nCouldn't get the title id!\n");
+		printf("\nError code: %lx\n", ret);
 		// state = BACKUP_ERROR;
 	}
 
@@ -178,11 +181,10 @@ int main(int argc, char* argv[])
 		gfxSwapBuffers();
 	}
 
-	FS_fsExit();
+	FS_Exit();
 	{
 		hidScanInput();
 		if (!(hidKeysHeld() & KEY_L) && !(hidKeysHeld() & KEY_R))
-		// if (hidKeysHeld() & )
 		{
 			FS_MediaType mediaType = 3;
 			FSUSER_GetMediaType(&mediaType);
