@@ -30,25 +30,25 @@ int main(int argc, char* argv[])
 	ret = FS_Init();
 	if (R_FAILED(ret))
 	{
-		consoleLog("\nFS not fully initialized!\n");
+		consoleLog("\nCouldn't initialize the FS module!\n");
 		consoleLog("Have you selected a title?\n");
-		printf("Error code: %lx\n", ret);
+		printf("Error code: 0x%lx\n", ret);
 		// state = STATE_ERROR;
 	}
 
 	ret = saveInit();
 	if (R_FAILED(ret))
 	{
-		printf("\nSave module not initialized!\n");
-		printf("Error code: %lx\n", ret);
+		printf("\nCouldn't initialize the Save module!\n");
+		printf("Error code: 0x%lx\n", ret);
 		// state = BACKUP_ERROR;
 	}
 
 	ret = saveGetTitleId(&titleId);
 	if (R_FAILED(ret))
 	{
-		printf("\nCouldn't get the title id!\n");
-		printf("Error code: %lx\n", ret);
+		printf("\nCouldn't get the title id of the game!\n");
+		printf("Error code: 0x%lx\n", ret);
 		// state = BACKUP_ERROR;
 	}
 

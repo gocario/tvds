@@ -48,7 +48,7 @@ bool FSDEBUG_FixArchive(FS_Archive** archive)
 
 Result FS_ReadFile(char* path, void* dst, FS_Archive* archive, u64 maxSize, u32* bytesRead)
 {
-	if (!path || !dst || !archive) return -1;
+	if (!path || !dst || !archive || !bytesRead) return -1;
 	
 #ifdef FS_DEBUG_FIX_ARCHIVE
 	if (!FSDEBUG_FixArchive(&archive)) return -1;
@@ -83,7 +83,7 @@ Result FS_ReadFile(char* path, void* dst, FS_Archive* archive, u64 maxSize, u32*
 
 Result FS_WriteFile(char* path, void* src, u64 size, FS_Archive* archive, u32* bytesWritten)
 {
-	if (!path || !src || !archive) return -1;
+	if (!path || !src || !archive || !bytesWritten) return -1;
 
 #ifdef FS_DEBUG_FIX_ARCHIVE
 	if (!FSDEBUG_FixArchive(&archive)) return -1;
@@ -149,6 +149,8 @@ Result FS_CreateDirectory(char* path, FS_Archive* archive)
 
 Result FS_CommitArchive(FS_Archive* archive)
 {
+	if (!archive) return -1;
+	
 	Result ret;
 
 	debug_print("FS_CommitArchive:\n");

@@ -231,6 +231,8 @@ Result fsDirGotoSubDir(void)
 	return ret;
 }
 
+#include "key.h"
+
 /**
  * @todo comment static
  */
@@ -240,10 +242,6 @@ static Result fsDirCopy(fsEntry* srcEntry, fsDir* srcDir, fsDir* dstDir, bool ov
 	{
 		if (!srcEntry->isRealDirectory) return 1;
 
-		// TODO Implements rec copy for folders
-
-		return 1;
-
 		fsEntry srcPath;
 		// Create another fsEntry for the scan only.
 		srcPath.attributes = srcEntry->attributes;
@@ -251,19 +249,29 @@ static Result fsDirCopy(fsEntry* srcEntry, fsDir* srcDir, fsDir* dstDir, bool ov
 		srcPath.isRealDirectory = true;
 		srcPath.isRootDirectory = !(strcmp("/", srcEntry->name));
 
-		memset(srcPath.name, 0, sizeof(fsEntry));
+		memset(srcPath.name, 0, FS_MAX_PATH_LENGTH);
 		strcpy(srcPath.name, dstDir->entry.name);
 		strcat(srcPath.name, srcEntry->name);
 		consoleLog("\a%s\n", srcPath.name);
 
 		FS_CreateDirectory(srcPath.name, dstDir->archive);
 
+		memset(srcPath.name, 0, FS_MAX_PATH_LENGTH);
+		strcpy(srcPath.name, srcDir->entry.name);
+		strcat(srcPath.name, srcEntry->name);
+		consoleLog("\a%s\n", srcPath.name);
+
 		fsScanDir(&srcPath, srcDir->archive, false);
 		fsEntry* next = srcPath.firstEntry;
 
 		while (next)
 		{
-			memset(srcPath.name, 0, sizeof(fsEntry));
+			srcPath.attributes = next->attributes;
+			srcPath.isDirectory = next->isDirectory;
+			srcPath.isRealDirectory = next->isRealDirectory;
+			srcPath.isRootDirectory = next->isRootDirectory;
+
+			memset(srcPath.name, 0, FS_MAX_PATH_LENGTH);
 			strcat(srcPath.name, srcEntry->name);
 			strcat(srcPath.name, "/");
 			strcat(srcPath.name, next->name);

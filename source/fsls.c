@@ -14,8 +14,7 @@
 
 Result fsCopyFile(char* srcPath, FS_Archive* srcArchive, char* dstPath, FS_Archive* dstArchive, u32 attributes, bool overwrite)
 {
-	Result ret;
-	Handle srcHandle, dstHandle;
+	if (!srcPath || !srcArchive || !dstPath || !dstArchive) return -1;
 
 #ifdef FS_DEBUG_FIX_ARCHIVE
 	if (!FSDEBUG_FixArchive(&srcArchive)) return -1;
@@ -24,6 +23,11 @@ Result fsCopyFile(char* srcPath, FS_Archive* srcArchive, char* dstPath, FS_Archi
 #ifdef FS_DEBUG_FIX_ARCHIVE
 	if (!FSDEBUG_FixArchive(&dstArchive)) return -1;
 #endif
+
+	Result ret;
+	Handle srcHandle, dstHandle;
+
+	consoleLog("fsCopyFile(\"%s\", %li, \"%s\", %li)\n", srcPath, srcArchive->id, dstPath, dstArchive->id);
 
 	ret = FSUSER_OpenFile(&dstHandle, *dstArchive, fsMakePath(PATH_ASCII, dstPath), FS_OPEN_READ, FS_ATTRIBUTE_NONE);
 	r(" > FSUSER_OpenFile: %lx\n", ret);
@@ -82,10 +86,10 @@ Result fsScanDir(fsEntry* dir, FS_Archive* archive, bool rec)
 	if (!FSDEBUG_FixArchive(&archive)) return -1;
 #endif
 
-	consoleLog("fsScanDir(\"%s\", %li)\n", dir->name, archive->id);
-
 	Result ret;
 	Handle dirHandle;
+
+	consoleLog("fsScanDir(\"%s\", %li)\n", dir->name, archive->id);
 
 	dir->firstEntry = NULL;
 	dir->entryCount = 0;
@@ -238,7 +242,7 @@ Result fsFreeDir(fsEntry* dir)
 Result fsAddParentDir(fsEntry* dir)
 {
 	if (!dir) return -1;
-	
+
 	// If the dir is the root directory. (no!)
 	dir->isRootDirectory = !strcmp("/", dir->name) || !strcmp("", dir->name);
 	
