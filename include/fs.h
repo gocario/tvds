@@ -32,7 +32,7 @@ extern FS_Archive saveArchive;
 #define FS_DEBUG_FIX_ARCHIVE
 #ifdef FS_DEBUG_FIX_ARCHIVE
 /**
- * @brief Redirect the saveArchive to the sdmcArchive for #Citra use
+ * @brief Redirects the saveArchive to the sdmcArchive for #Citra use
  * @return Whether the archive fix is working.
  */
 bool FSDEBUG_FixArchive(FS_Archive** archive);
