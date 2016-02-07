@@ -40,7 +40,7 @@ Result saveRemoveSecureValue(u64 titleId, FS_MediaType mediaType, u8* res)
 	u64 in;
 	u8 out;
 
-	in = ((u64) SECUREVALUE_SLOT_SD << 32) | ((u32) titleId);
+	in = ((u64) SECUREVALUE_SLOT_SD << 32) | (titleId & 0xFFFFFF00);
 	ret = FSUSER_ControlSecureSave(SECURESAVE_ACTION_DELETE, &in, 8, &out, 1);
 	if (R_FAILED(ret)) return ret;
 
