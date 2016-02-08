@@ -7,11 +7,28 @@
 
 #include <3ds/services/fs.h>
 
+///
+typedef struct fsStackNode
+{
+	s32 value;
+	struct fsStackNode* prev;
+} fsStackNode;
+
+/// 
+typedef struct
+{
+	fsStackNode* last;
+} fsStack;
+
+Result fsStackPush(fsStack* stack, s32 value);
+Result fsStackPop(fsStack* stack, s32* value);
+
 /// The directory entry to read from, inherits from fsEntry.
 typedef struct fsDir
 {
 	fsEntry entry;			///< The mother fsEntry.
 	fsEntry* entrySelected;	///< The current entry selection.
+	fsStack entryStack;		///< The stack of parent folders.
 	s16 entryOffsetId;		///< The current entry offset.
 	s16 entrySelectedId;	///< The current entry selection.
 	FS_Archive* archive;	///< The archive of the dir.
@@ -19,7 +36,6 @@ typedef struct fsDir
 
 extern fsDir saveDir;
 extern fsDir sdmcDir;
-extern fsDir* currentDir; // TODO: Remove
 
 /**
  * @brief Initializes fsDir.

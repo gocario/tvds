@@ -12,17 +12,37 @@
 #define r(format, args...) consoleLog(format, ##args)
 // #define r(format, args...)
 
+Result fsStackPush(fsStack* stack, s32 value)
+{
+	if (!stack) return -1;
+
+	fsStackNode* last = (fsStackNode*) malloc(1 * sizeof(fsStackNode));
+	last->value = value;
+	last->prev = stack->last;	
+	stack->last = last;
+
+	return last->prev != NULL;
+}
+
+Result fsStackPop(fsStack* stack, s32* value)
+{
+	if (!stack) return -1;
+	if (!stack->last) return 2;
+
+	if (value) *value = stack->last->value;
+	fsStackNode* prev = stack->last->prev;
+	free(stack->last);
+	stack->last = prev;
+
+	return stack->last != NULL;
+}
+
 fsDir saveDir;
 fsDir sdmcDir;
 
-fsDir* currentDir;
+static fsDir* currentDir;
 static fsDir* dickDir;
-
 static u32 entryPrintCount = 20;
-
-static void fsDirPrint(fsDir* dir, char* data);
-static void fsDirRefreshDir(fsDir* _dir);
-static Result fsDirCopy(fsEntry* srcEntry, fsDir* srcDir, fsDir* dstDir, bool overwrite);
 
 /**
  * @brief Refreshs the current dir (freeing and scanning it)
