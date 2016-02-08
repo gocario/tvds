@@ -152,9 +152,17 @@ Result fsScanDir(fsEntry* dir, FS_Archive* archive, bool rec)
 						{
 							if (entry->isDirectory)
 							{
-								entry->nextEntry = tmpPrevEntry->nextEntry;
-								tmpPrevEntry->nextEntry = entry;
-
+								if (tmpPrevEntry == dir->firstEntry)
+								{
+									entry->nextEntry = dir->firstEntry;
+									dir->firstEntry = entry;
+								}
+								else
+								{
+									entry->nextEntry = tmpPrevEntry->nextEntry;
+									tmpPrevEntry->nextEntry = entry;
+								}
+								
 								tmpPrevEntry = NULL;
 							}
 							else
@@ -165,8 +173,16 @@ Result fsScanDir(fsEntry* dir, FS_Archive* archive, bool rec)
 						}
 						else if (strcmp(entry->name, tmpNextEntry->name) < 0)
 						{
-							entry->nextEntry = tmpPrevEntry->nextEntry;
-							tmpPrevEntry->nextEntry = entry;
+							if (tmpPrevEntry == dir->firstEntry)
+							{
+								entry->nextEntry = dir->firstEntry;
+								dir->firstEntry = entry;
+							}
+							else
+							{
+								entry->nextEntry = tmpPrevEntry->nextEntry;
+								tmpPrevEntry->nextEntry = entry;
+							}
 
 							tmpPrevEntry = NULL;
 						}
