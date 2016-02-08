@@ -53,8 +53,7 @@ static void fsDirRefreshDir(fsDir* _dir)
 	fsFreeDir(&dir->entry);
 	fsScanDir(&dir->entry, dir->archive, false);
 	fsAddParentDir(&dir->entry);
-
-	dir->entrySelectedId = 0;
+	// dir->entrySelectedId = 0;
 }
 
 Result fsDirInit(void)
@@ -256,6 +255,7 @@ Result fsDirGotoSubDir(void)
 			{
 				fsStackPush(&currentDir->entryStack, currentDir->entrySelectedId);
 				fsDirRefreshDir(currentDir);
+				currentDir->entrySelectedId = 0;
 			}
 		}
 	}
