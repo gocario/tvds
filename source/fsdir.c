@@ -12,7 +12,7 @@
 #define r(format, args...) consoleLog(format, ##args)
 // #define r(format, args...)
 
-Result fsStackPush(fsStack* stack, s32 value)
+Result fsStackPush(fsStack* stack, s16 value)
 {
 	if (!stack) return -1;
 
@@ -24,7 +24,7 @@ Result fsStackPush(fsStack* stack, s32 value)
 	return last->prev != NULL;
 }
 
-Result fsStackPop(fsStack* stack, s32* value)
+Result fsStackPop(fsStack* stack, s16* value)
 {
 	if (!stack) return -1;
 	if (!stack->last) return 2;
@@ -84,6 +84,9 @@ Result fsDirExit(void)
 {
 	fsFreeDir(&saveDir.entry);
 	fsFreeDir(&sdmcDir.entry);
+
+	while (fsStackPop(&saveDir.entryStack, NULL) == 0);
+	while (fsStackPop(&sdmcDir.entryStack, NULL) == 0);
 
 	return 0;
 }
@@ -226,7 +229,11 @@ Result fsDirGotoParentDir(void)
 	if (!currentDir->entry.isRootDirectory)
 	{
 		ret = fsGotoParentDir(&currentDir->entry);
-		if (ret == 0) fsDirRefreshDir(currentDir);
+		if (ret == 0)
+		{
+			fsStackPop(&currentDir->entryStack, &currentDir->entrySelectedId);
+			fsDirRefreshDir(currentDir);
+		}
 	}
 	return ret;
 }
@@ -245,7 +252,11 @@ Result fsDirGotoSubDir(void)
 		else if (currentDir->entrySelected->isDirectory)
 		{
 			Result ret = fsGotoSubDir(&currentDir->entry, currentDir->entrySelected->name);
-			if (ret == 0) fsDirRefreshDir(currentDir);
+			if (ret == 0)
+			{
+				fsStackPush(&currentDir->entryStack, currentDir->entrySelectedId);
+				fsDirRefreshDir(currentDir);
+			}
 		}
 	}
 	return ret;

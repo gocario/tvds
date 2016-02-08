@@ -10,7 +10,7 @@
 ///
 typedef struct fsStackNode
 {
-	s32 value;
+	s16 value;
 	struct fsStackNode* prev;
 } fsStackNode;
 
@@ -20,8 +20,8 @@ typedef struct
 	fsStackNode* last;
 } fsStack;
 
-Result fsStackPush(fsStack* stack, s32 value);
-Result fsStackPop(fsStack* stack, s32* value);
+Result fsStackPush(fsStack* stack, s16 value);
+Result fsStackPop(fsStack* stack, s16* value);
 
 /// The directory entry to read from, inherits from fsEntry.
 typedef struct fsDir
