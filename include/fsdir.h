@@ -7,20 +7,31 @@
 
 #include <3ds/services/fs.h>
 
-///
+/// A stack node for fsDir.
 typedef struct fsStackNode
 {
 	s16 value;
 	struct fsStackNode* prev;
 } fsStackNode;
 
-/// 
+/// A stack for fsDir.
 typedef struct
 {
 	fsStackNode* last;
 } fsStack;
 
+/**
+ * @brief Push a value to a stack.
+ * @param stack The stack to push.
+ * @param value The value to push.
+ */
 Result fsStackPush(fsStack* stack, s16 value);
+
+/**
+ * @brief Pop a value from a stack.
+ * @param stack The stack to pop.
+ * @param value The value popped.
+ */
 Result fsStackPop(fsStack* stack, s16* value);
 
 /// The directory entry to read from, inherits from fsEntry.
