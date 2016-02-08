@@ -9,6 +9,8 @@
 #include "save.h"
 #include "console.h"
 
+#define HELD_TICK (1200)
+
 typedef enum {
 	STATE_EOF,			///< End of file
 	STATE_ERROR,		///< Error
@@ -62,13 +64,16 @@ int main(int argc, char* argv[])
 	fsDirPrintSave();
 	fsDirPrintSdmc();
 
-	u32 kDown;
+	u64 heldUp = 0;
+	u64 heldDown = 0;
+	u32 kDown, kHeld;
 	while (aptMainLoop())
 	{
 		gspWaitForVBlank();
 		hidScanInput();
 
 		kDown = hidKeysDown();
+		kHeld = hidKeysHeld();
 
 		switch (state)
 		{
@@ -125,12 +130,32 @@ int main(int argc, char* argv[])
 				{
 					fsDirMove(-1);
 					fsDirPrintCurrent();
+					heldUp = svcGetSystemTick();
+				}
+				else if (kHeld & KEY_UP)
+				{
+					if (heldUp + HELD_TICK < svcGetSystemTick())
+					{
+						fsDirMove(-1);
+						fsDirPrintCurrent();
+						heldUp = svcGetSystemTick();
+					}
 				}
 
 				if (kDown & KEY_DOWN)
 				{
 					fsDirMove(+1);
 					fsDirPrintCurrent();
+					heldDown = svcGetSystemTick();
+				}
+				else if (kHeld & KEY_DOWN)
+				{
+					if (heldDown + HELD_TICK < svcGetSystemTick())
+					{
+						fsDirMove(+1);
+						fsDirPrintCurrent();
+						heldDown = svcGetSystemTick();
+					}
 				}
 
 				if (kDown & KEY_A)
