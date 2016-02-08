@@ -12,24 +12,26 @@
 #define r(format, args...) consoleLog(format, ##args)
 // #define r(format, args...)
 
-Result fsStackPush(fsStack* stack, s16 value)
+Result fsStackPush(fsStack* stack, s16 offsetId, s16 selectedId)
 {
 	if (!stack) return -1;
 
 	fsStackNode* last = (fsStackNode*) malloc(1 * sizeof(fsStackNode));
-	last->value = value;
+	last->offsetId = offsetId;
+	last->selectedId = selectedId;
 	last->prev = stack->last;	
 	stack->last = last;
 
 	return last->prev != NULL;
 }
 
-Result fsStackPop(fsStack* stack, s16* value)
+Result fsStackPop(fsStack* stack, s16* offsetId, s16* selectedId)
 {
 	if (!stack) return -1;
 	if (!stack->last) return 2;
 
-	if (value) *value = stack->last->value;
+	if (offsetId) *offsetId = stack->last->offsetId;
+	if (selectedId) *selectedId = stack->last->selectedId;
 	fsStackNode* prev = stack->last->prev;
 	free(stack->last);
 	stack->last = prev;
@@ -53,7 +55,9 @@ static void fsDirRefreshDir(fsDir* _dir)
 	fsFreeDir(&dir->entry);
 	fsScanDir(&dir->entry, dir->archive, false);
 	fsAddParentDir(&dir->entry);
-	// dir->entrySelectedId = 0;
+
+	dir->entryOffsetId = 0;
+	dir->entrySelectedId = 0;
 }
 
 Result fsDirInit(void)
@@ -84,8 +88,8 @@ Result fsDirExit(void)
 	fsFreeDir(&saveDir.entry);
 	fsFreeDir(&sdmcDir.entry);
 
-	while (fsStackPop(&saveDir.entryStack, NULL) == 0);
-	while (fsStackPop(&sdmcDir.entryStack, NULL) == 0);
+	while (fsStackPop(&saveDir.entryStack, NULL, NULL) == 0);
+	while (fsStackPop(&sdmcDir.entryStack, NULL, NULL) == 0);
 
 	return 0;
 }
@@ -230,8 +234,8 @@ Result fsDirGotoParentDir(void)
 		ret = fsGotoParentDir(&currentDir->entry);
 		if (ret == 0)
 		{
-			fsStackPop(&currentDir->entryStack, &currentDir->entrySelectedId);
 			fsDirRefreshDir(currentDir);
+			fsStackPop(&currentDir->entryStack, &currentDir->entryOffsetId, &currentDir->entrySelectedId);
 		}
 	}
 	return ret;
@@ -253,9 +257,8 @@ Result fsDirGotoSubDir(void)
 			Result ret = fsGotoSubDir(&currentDir->entry, currentDir->entrySelected->name);
 			if (ret == 0)
 			{
-				fsStackPush(&currentDir->entryStack, currentDir->entrySelectedId);
+				fsStackPush(&currentDir->entryStack, currentDir->entryOffsetId, currentDir->entrySelectedId);
 				fsDirRefreshDir(currentDir);
-				currentDir->entrySelectedId = 0;
 			}
 		}
 	}

@@ -10,7 +10,8 @@
 /// A stack node for fsDir.
 typedef struct fsStackNode
 {
-	s16 value;
+	s16 offsetId;
+	s16 selectedId;
 	struct fsStackNode* prev;
 } fsStackNode;
 
@@ -25,14 +26,14 @@ typedef struct
  * @param stack The stack to push.
  * @param value The value to push.
  */
-Result fsStackPush(fsStack* stack, s16 value);
+Result fsStackPush(fsStack* stack, s16 offsetId, s16 selectedId);
 
 /**
  * @brief Pop a value from a stack.
  * @param stack The stack to pop.
  * @param value The value popped.
  */
-Result fsStackPop(fsStack* stack, s16* value);
+Result fsStackPop(fsStack* stack, s16* offsetId, s16* selectedId);
 
 /// The directory entry to read from, inherits from fsEntry.
 typedef struct fsDir
