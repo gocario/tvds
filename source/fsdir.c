@@ -24,10 +24,21 @@ static void fsDirPrint(fsDir* dir, char* data);
 static void fsDirRefreshDir(fsDir* _dir);
 static Result fsDirCopy(fsEntry* srcEntry, fsDir* srcDir, fsDir* dstDir, bool overwrite);
 
+/**
+ * @brief Refreshs the current dir (freeing and scanning it)
+ */
+static void fsDirRefreshDir(fsDir* _dir)
+{
+	fsDir* dir = (_dir ? _dir : currentDir);
+	fsFreeDir(&dir->entry);
+	fsScanDir(&dir->entry, dir->archive, false);
+	fsAddParentDir(&dir->entry);
+
+	dir->entrySelectedId = 0;
+}
+
 Result fsDirInit(void)
 {
-	Result ret;
-
 	memset(&saveDir, 0, sizeof(fsDir));
 	memset(&sdmcDir, 0, sizeof(fsDir));
 
@@ -37,26 +48,22 @@ Result fsDirInit(void)
 	// saveDir.archive = &sdmcArchive; // TODO Remove&Uncomment
 	saveDir.archive = &saveArchive;
 	saveDir.entryOffsetId = 0;
-	saveDir.entrySelectedId = 0;
-	ret = fsScanDir(&saveDir.entry, saveDir.archive, false);
-	r(" > fsScanDir: %lx\n", ret);
-	if (R_FAILED(ret)) return ret;
-
-	ret = fsAddParentDir(&saveDir.entry);
-	r(" > fsAddParentDir: %lx\n", ret);
+	fsDirRefreshDir(&saveDir);
 
 	sdmcDir.archive = &sdmcArchive;
 	sdmcDir.entryOffsetId = 0;
-	sdmcDir.entrySelectedId = 0;
-	ret = fsScanDir(&sdmcDir.entry, sdmcDir.archive, false);
-	r(" > fsScanDir: %lx\n", ret);
-	if (R_FAILED(ret)) return ret;
-
-	ret = fsAddParentDir(&sdmcDir.entry);
-	r(" > fsAddParentDir: %lx\n", ret);
+	fsDirRefreshDir(&sdmcDir);
 
 	currentDir = &sdmcDir;
 	dickDir = &saveDir;
+
+	return 0;
+}
+
+Result fsDirExit(void)
+{
+	fsFreeDir(&saveDir.entry);
+	fsFreeDir(&sdmcDir.entry);
 
 	return 0;
 }
@@ -72,7 +79,7 @@ static void fsDirPrint(fsDir* dir, char* data)
 	u8 row = 3;
 	fsEntry* next = dir->entry.firstEntry;
 	
-	// Skip the first off-screen entries;
+	// Skip the first off-screen entries
 	for (; next && i < dir->entryOffsetId; i++)
 	{
 		next = next->nextEntry;
@@ -160,6 +167,8 @@ void fsDirSwitch(fsDir* dir)
 
 void fsDirMove(s16 count)
 {
+	// That bitch was pretty hard... :/
+
 	currentDir->entrySelectedId += count;
 
 	if (currentDir->entrySelectedId < 0)
@@ -189,21 +198,10 @@ void fsDirMove(s16 count)
 	}
 }
 
-/**
- * @brief Refreshs the current dir (freeing and scanning it)
- */
-static void fsDirRefreshDir(fsDir* _dir)
-{
-	fsDir* dir = (_dir ? _dir : currentDir);
-	fsFreeDir(&dir->entry);
-	fsScanDir(&dir->entry, dir->archive, false);
-	fsAddParentDir(&dir->entry);
-
-	dir->entrySelectedId = 0;
-}
-
 Result fsDirGotoParentDir(void)
 {
+	consoleLog("Opening -> %s/\n", currentDir->entrySelected->name);
+
 	Result ret = 1;
 	if (!currentDir->entry.isRootDirectory)
 	{
@@ -215,6 +213,8 @@ Result fsDirGotoParentDir(void)
 
 Result fsDirGotoSubDir(void)
 {
+	consoleLog("Opening -> %s/\n", currentDir->entrySelected->name);
+
 	Result ret = 1;
 	if (currentDir->entrySelected)
 	{
@@ -231,10 +231,12 @@ Result fsDirGotoSubDir(void)
 	return ret;
 }
 
-#include "key.h"
-
 /**
- * @todo comment static
+ * @brief Copy an entry from a dir to another dir with overwrite option.
+ * @param srcEntry The source entry to copy.
+ * @param srcDir The source dir.
+ * @param dstDir The destination dir.
+ * @param overwrite Whether it shall overwrite the data.
  */
 static Result fsDirCopy(fsEntry* srcEntry, fsDir* srcDir, fsDir* dstDir, bool overwrite)
 {

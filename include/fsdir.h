@@ -27,6 +27,11 @@ extern fsDir* currentDir; // TODO: Remove
 Result fsDirInit(void);
 
 /**
+ * @brief Exits fsDir.
+ */
+Result fsDirExit(void);
+
+/**
  * @brief Prints the save dir in its console.
  */
 void fsDirPrintSave(void);
