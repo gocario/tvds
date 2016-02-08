@@ -112,7 +112,7 @@ static void fsDirPrint(fsDir* dir, char* data)
 	}
 
 	consoleClear();
-
+	
 	consoleResetColor();
 	printf("\x1B[0;0H%s data:", data);
 	consoleForegroundColor(TEAL);
@@ -124,23 +124,23 @@ static void fsDirPrint(fsDir* dir, char* data)
 		// If the entry is the current entry
 		if (dir == currentDir && dir->entrySelectedId == i)
 		{
-			// Tricky-hacky
-			dir->entrySelected = next;
-
 			consoleBackgroundColor(SILVER);
-			if (next->isDirectory)
-				consoleForegroundColor(TEAL);
-			else
-				consoleForegroundColor(BLACK);
+			if (next->isDirectory) consoleForegroundColor(TEAL);
+			else consoleForegroundColor(BLACK);
 			// Blank placeholder
 			printf("\x1B[%u;0H \a                       ", row);
-		}
-		// Else if the entry is just a directory
-		else if (next->isDirectory)
-			consoleForegroundColor(CYAN);
 
+			// Tricky-hacky
+			dir->entrySelected = next;
+		}
+		// Else if the entry is just a directory or a simple file
+		else if (next->isDirectory) consoleForegroundColor(CYAN);
+		else consoleForegroundColor(WHITE);
+		// Display entry's name
 		printf("\x1B[%u;3H%.22s", row++, next->name);
 		consoleResetColor();
+
+		// Iterate though linked list
 		next = next->nextEntry;
 	}
 }
