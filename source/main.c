@@ -9,7 +9,7 @@
 #include "save.h"
 #include "console.h"
 
-#define HELD_TICK (1200)
+#define HELD_TICK (16000000)
 
 typedef enum {
 	STATE_EOF,			///< End of file
@@ -53,12 +53,6 @@ int main(int argc, char* argv[])
 		printf("Error code: 0x%lx\n", ret);
 		// state = BACKUP_ERROR;
 	}
-
-	// fsEntry dir;
-	// memset(dir.name, 0, FS_MAX_PATH_LENGTH);
-	// strcpy(dir.name, "/pk/data/");
-	// fsScanDir(&dir, &sdmcArchive, false);
-	// fsFreeDir(&dir);
 
 	fsDirInit();
 	fsDirPrintSave();
@@ -128,15 +122,15 @@ int main(int argc, char* argv[])
 
 				if (kDown & KEY_UP)
 				{
-					fsDirMove(-1);
+					fsDirMove(kHeld & KEY_R ? -5 : -1);
 					fsDirPrintCurrent();
-					heldUp = svcGetSystemTick();
+					heldUp = svcGetSystemTick() + HELD_TICK * 2;
 				}
 				else if (kHeld & KEY_UP)
 				{
 					if (heldUp + HELD_TICK < svcGetSystemTick())
 					{
-						fsDirMove(-1);
+						fsDirMove(kHeld & KEY_R ? -5 : -1);
 						fsDirPrintCurrent();
 						heldUp = svcGetSystemTick();
 					}
@@ -144,15 +138,15 @@ int main(int argc, char* argv[])
 
 				if (kDown & KEY_DOWN)
 				{
-					fsDirMove(+1);
+					fsDirMove(kHeld & KEY_R ? +5 : +1);
 					fsDirPrintCurrent();
-					heldDown = svcGetSystemTick();
+					heldDown = svcGetSystemTick() + HELD_TICK * 2;
 				}
 				else if (kHeld & KEY_DOWN)
 				{
 					if (heldDown + HELD_TICK < svcGetSystemTick())
 					{
-						fsDirMove(+1);
+						fsDirMove(kHeld & KEY_R ? +5 : +1);
 						fsDirPrintCurrent();
 						heldDown = svcGetSystemTick();
 					}
@@ -160,7 +154,6 @@ int main(int argc, char* argv[])
 
 				if (kDown & KEY_A)
 				{
-					consoleLog("Opening -> %s\n", currentDir->entrySelected->name);
 					ret = fsDirGotoSubDir();
 					consoleLog("   > fsfDirGotoSubDir: %lx\n", ret);
 					fsDirPrintCurrent();						
@@ -206,6 +199,7 @@ int main(int argc, char* argv[])
 		gfxSwapBuffers();
 	}
 
+	fsDirExit();
 	FS_Exit();
 	{
 		hidScanInput();
@@ -218,6 +212,7 @@ int main(int argc, char* argv[])
 			{
 				printf("\nSecure value not removed.\n");
 				printf("It might already be unitialized.\n");
+				printf("Error code: 0x%lx\n", ret);
 				printf("\n\nPress any key to exit.\n");
 				waitKey(KEY_ANY);
 			}
