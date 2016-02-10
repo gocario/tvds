@@ -15,10 +15,29 @@ typedef enum {
 	STATE_EOF,			///< End of file
 	STATE_ERROR,		///< Error
 	STATE_BROWSE,		///< Browse the dir
-	STATE_OW_CONFIRM,	///< Overwrite confirmation
 } State;
 
 static State state;
+
+void drawMenu()
+{
+	consoleSelect(&logConsole);
+	consoleClear();
+
+	printf(" Welcome in tvds, a tdvs clone.\n");
+	printf("\n");
+	printf("> [Up/Down] Select file/folder\n");
+	printf("> [L/R] Swap between Save/Sdmc folder\n");
+	printf("> [A] Navigate inside a folder\n");
+	printf("> [B] Return to the parent folder\n");
+	printf("> [X] Delete the current file/folder\n");
+	printf("> [Y] Copy the current file/folder\n");
+	printf("> [Select] Print these instructions\n");
+	printf("> [Start] Exit tvds\n");
+	printf("\n");
+
+	consoleSelectDefault();
+}
 
 int main(int argc, char* argv[])
 {
@@ -58,6 +77,8 @@ int main(int argc, char* argv[])
 	fsDirPrintSave();
 	fsDirPrintSdmc();
 
+	drawMenu();
+
 	u64 heldUp = 0;
 	u64 heldDown = 0;
 	u32 kDown, kHeld;
@@ -71,32 +92,6 @@ int main(int argc, char* argv[])
 
 		switch (state)
 		{
-			case STATE_OW_CONFIRM:
-			{
-				if (kDown)
-				{
-					if (kDown & KEY_SELECT)
-					{
-						consoleLog("Overwriting file!\n");
-						ret = fsDirCopyCurrentFileOverwrite();
-						consoleLog("   > fsDirCopyCurrentFileOverwrite: %lx\n", ret);
-						fsDirPrintDick();
-
-						state = STATE_BROWSE;
-						break;
-					}
-					else
-					{
-						consoleLog("Overwrite cancelled!\n");
-
-						state = STATE_BROWSE;
-					}
-				}
-				else
-				{
-					break;
-				}
-			}
 			case STATE_BROWSE:
 			{
 				if (kDown & (KEY_LEFT | KEY_RIGHT))
@@ -126,15 +121,15 @@ int main(int argc, char* argv[])
 					fsDirPrintCurrent();
 					heldUp = svcGetSystemTick() + HELD_TICK * 2;
 				}
-				else if (kHeld & KEY_UP)
-				{
-					if (heldUp + HELD_TICK < svcGetSystemTick())
-					{
-						fsDirMove(kHeld & KEY_R ? -5 : -1);
-						fsDirPrintCurrent();
-						heldUp = svcGetSystemTick();
-					}
-				}
+				// else if (kHeld & KEY_UP)
+				// {
+				// 	if (heldUp + HELD_TICK < svcGetSystemTick())
+				// 	{
+				// 		fsDirMove(kHeld & KEY_R ? -5 : -1);
+				// 		fsDirPrintCurrent();
+				// 		heldUp = svcGetSystemTick();
+				// 	}
+				// }
 
 				if (kDown & KEY_DOWN)
 				{
@@ -142,15 +137,15 @@ int main(int argc, char* argv[])
 					fsDirPrintCurrent();
 					heldDown = svcGetSystemTick() + HELD_TICK * 2;
 				}
-				else if (kHeld & KEY_DOWN)
-				{
-					if (heldDown + HELD_TICK < svcGetSystemTick())
-					{
-						fsDirMove(kHeld & KEY_R ? +5 : +1);
-						fsDirPrintCurrent();
-						heldDown = svcGetSystemTick();
-					}
-				}
+				// else if (kHeld & KEY_DOWN)
+				// {
+				// 	if (heldDown + HELD_TICK < svcGetSystemTick())
+				// 	{
+				// 		fsDirMove(kHeld & KEY_R ? +5 : +1);
+				// 		fsDirPrintCurrent();
+				// 		heldDown = svcGetSystemTick();
+				// 	}
+				// }
 
 				if (kDown & KEY_A)
 				{
@@ -166,17 +161,23 @@ int main(int argc, char* argv[])
 					fsDirPrintCurrent();
 				}
 
+				if (kDown & KEY_X)
+				{
+					ret = fsDirDeleteCurrentFile();
+					consoleLog("   > fsDirDeleteCurrentFile: %lx\n", ret);
+					fsDirPrintCurrent();
+				}
+
 				if (kDown & KEY_Y)
 				{
-					ret = fsDirCopyCurrentFile();
+					ret = fsDirCopyCurrentFile(false);
 					consoleLog("   > fsDirCopyCurrentFile: %lx\n", ret);
-					if (ret == FS_OVERWRITE)
-					{
-						consoleLog("File already exist!\n");
-						consoleLog("Press SELECT to overwrite it!\n");
-						state = STATE_OW_CONFIRM;
-					}
 					fsDirPrintDick();
+				}
+
+				if (kDown & KEY_SELECT)
+				{
+					drawMenu();
 				}
 
 				break;
@@ -205,14 +206,15 @@ int main(int argc, char* argv[])
 		hidScanInput();
 		if (!(hidKeysHeld() & KEY_L) && !(hidKeysHeld() & KEY_R))
 		{
+			u8 out = 0;
 			FS_MediaType mediaType = 3;
 			FSUSER_GetMediaType(&mediaType);
-			Result ret = saveRemoveSecureValue(titleId, mediaType, NULL);
+			Result ret = saveRemoveSecureValue(titleId, mediaType, &out);
 			if (R_FAILED(ret))
 			{
 				printf("\nSecure value not removed.\n");
 				printf("It might already be unitialized.\n");
-				printf("Error code: 0x%lx\n", ret);
+				printf("Error code: 0x%lx (%i)\n", ret, out);
 				printf("\n\nPress any key to exit.\n");
 				waitKey(KEY_ANY);
 			}

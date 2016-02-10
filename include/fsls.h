@@ -8,7 +8,7 @@
 #define FS_MAX_FPATH_LENGTH (0x106) // 0x106
 #define FS_MAX_PATH_LENGTH (0x400) // 0x400
 
-#define FS_OVERWRITE (0xBADBABE)
+#define FS_OUT_OF_RESOURCE (0xD8604664)
 
 /// An entry of a file or a directory.
 typedef struct fsEntry
@@ -23,6 +23,16 @@ typedef struct fsEntry
 	struct fsEntry* firstEntry;		///< The first entry (child). FS_DIRECTORY
 	u16 entryCount;					///< The count of the entries (childs). FS_DIRECTORY
 } fsEntry;
+
+/**
+ * @todo comment
+ */
+bool fsFileExists(char* path, FS_Archive* archive);
+
+/**
+ * @todo comment
+ */
+bool fsDirExists(char* path, FS_Archive* archive);
 
 /**
  * @todo comment

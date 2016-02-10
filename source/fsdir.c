@@ -1,6 +1,7 @@
 #include "fsdir.h"
 #include "fsls.h"
 #include "fs.h"
+#include "key.h"
 #include "console.h"
 
 #include <3ds/result.h>
@@ -266,6 +267,28 @@ Result fsDirGotoSubDir(void)
 }
 
 /**
+ * @todo comment
+ */
+static bool fsWaitOverwrite()
+{
+	consoleLog("Overwrite detected!\n");
+	consoleLog("Press [Select] to confirm overwrite.\n");
+
+	return doKey(KEY_SELECT);
+}
+
+/**
+ * @todo comment
+ */
+static bool fsWaitDelete()
+{
+	consoleLog("Delete asked!\n");
+	consoleLog("Press [Select] to confirm delete.\n");
+
+	return doKey(KEY_SELECT);
+}
+
+/**
  * @brief Copy an entry from a dir to another dir with overwrite option.
  * @param srcEntry The source entry to copy.
  * @param srcDir The source dir.
@@ -290,7 +313,15 @@ static Result fsDirCopy(fsEntry* srcEntry, fsDir* srcDir, fsDir* dstDir, bool ov
 		strcat(srcPath.name, srcEntry->name);
 		consoleLog("\a%s\n", srcPath.name);
 
-		FS_CreateDirectory(srcPath.name, dstDir->archive);
+		if (fsDirExists(srcPath.name, dstDir->archive) && !overwrite)
+		{
+			if (!fsWaitOverwrite()) return FS_USER_INTERRUPT;
+			consoleLog("Overwrite validated!\n");
+		}
+		else
+		{
+			FS_CreateDirectory(srcPath.name, dstDir->archive);
+		}
 
 		memset(srcPath.name, 0, FS_MAX_PATH_LENGTH);
 		strcpy(srcPath.name, srcDir->entry.name);
@@ -339,29 +370,44 @@ static Result fsDirCopy(fsEntry* srcEntry, fsDir* srcDir, fsDir* dstDir, bool ov
 		// strncat(dstPath, srcEntry->name, FS_MAX_PATH_LENGTH - strlen(dstPath));
 		consoleLog("\a%s\n", dstPath);
 
+		if (fsFileExists(dstPath, dstDir->archive) && !overwrite)
+		{
+			if (!fsWaitOverwrite()) return FS_USER_INTERRUPT;
+			consoleLog("Overwrite validated!\n");
+		}
+
 		return fsCopyFile(srcPath, srcDir->archive, dstPath, dstDir->archive, srcEntry->attributes, overwrite);
 	}
 
 	return 1;
 }
 
-Result fsDirCopyCurrentFile(void)
+Result fsDirCopyCurrentFile(bool overwrite)
 {
-	Result ret = fsDirCopy(currentDir->entrySelected, currentDir, dickDir, false);
+	Result ret = fsDirCopy(currentDir->entrySelected, currentDir, dickDir, overwrite);
 	fsDirRefreshDir(dickDir);
 	return ret;
 }
 
-Result fsDirCopyCurrentFileOverwrite(void)
+Result fsDirCopyCurrentFolder(bool overwrite)
 {
-	Result ret = fsDirCopy(currentDir->entrySelected, currentDir, dickDir, true);
+	Result ret = fsDirCopy(&currentDir->entry, currentDir, dickDir, overwrite);
 	fsDirRefreshDir(dickDir);
 	return ret;
 }
 
-Result fsDirCopyCurrentFolder(void)
+Result fsDirDeleteCurrentFile(void)
 {
-	Result ret = fsDirCopy(&currentDir->entry, currentDir, dickDir, false);
-	fsDirRefreshDir(dickDir);
+	if (!fsWaitDelete()) return FS_USER_INTERRUPT;
+	consoleLog("Delete validated!\n");
+
+	char path[FS_MAX_PATH_LENGTH];
+	memset(path, 0, FS_MAX_PATH_LENGTH);
+	strcpy(path, currentDir->entry.name);
+	strcat(path, currentDir->entrySelected->name);
+	consoleLog("\a%s\n", path);
+
+	Result ret = FS_DeleteFile(path, currentDir->archive);
+	fsDirRefreshDir(currentDir);
 	return ret;
 }

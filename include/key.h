@@ -35,6 +35,26 @@ inline void waitKey(u32 key)
 	}
 }
 
+/**
+ * @brief Bloacks the running process until any key is pressed.
+ * @param key The key(s) to check for a single press.
+ * @return Whether the key was pressed once.
+ */
+inline bool doKey(u32 key)
+{
+	while (aptMainLoop())
+	{
+		gspWaitForVBlank();
+		hidScanInput();
+		if (hidKeysDown())
+		{
+			if (hidKeysDown() & key) return true;
+			else return false;
+		}
+	}
+	return false;
+}
+
 #ifdef __cplusplus
 }
 #endif

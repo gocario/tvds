@@ -7,6 +7,8 @@
 
 #include <3ds/services/fs.h>
 
+#define FS_USER_INTERRUPT (0x8000DEAD)
+
 /// A stack node for fsDir.
 typedef struct fsStackNode
 {
@@ -102,18 +104,16 @@ Result fsDirGotoParentDir(void);
 Result fsDirGotoSubDir(void);
 
 /**
- * @brief Copies the current file to the other dir.
- * @see fsDirCopyCurrentFileOverwrite(void)
+ * @brief Copies the current file/folder to the other dir.
  */
-Result fsDirCopyCurrentFile(void);
-
-/**
- * @brief Overwrites the current file to the other dir.
- * @see fsDirCopyCurrentFile(void)
- */
-Result fsDirCopyCurrentFileOverwrite(void);
+Result fsDirCopyCurrentFile(bool overwrite);
 
 /**
  * @brief Copies the current directory to the other dir.
  */
-Result fsDirCopyCurrentFolder(void);
+Result fsDirCopyCurrentFolder(bool overwrite);
+
+/**
+ * @brief Deletes the current file/folder.
+ */
+Result fsDirDeleteCurrentFile(void);

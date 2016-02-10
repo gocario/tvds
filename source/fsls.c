@@ -12,6 +12,50 @@
 // #define r(format, args...) consoleLog(format, ##args)
 #define r(format, args...)
 
+bool fsFileExists(char* path, FS_Archive* archive)
+{
+	if (!path || !archive) return -1;
+	
+#ifdef FS_DEBUG_FIX_ARCHIVE
+	if (!FSDEBUG_FixArchive(&archive)) return -1;
+#endif
+
+	Result ret;
+	Handle fileHandle;
+
+	ret = FSUSER_OpenFile(&fileHandle, *archive, fsMakePath(PATH_ASCII, path), FS_OPEN_READ, FS_ATTRIBUTE_NONE);
+	r(" > FSUSER_OpenDirectory: %lx\n", ret);
+
+	if (R_SUCCEEDED(ret))
+	{
+		FSFILE_Close(fileHandle);
+	}
+
+	return R_SUCCEEDED(ret);
+}
+
+bool fsDirExists(char* path, FS_Archive* archive)
+{
+	if (!path || !archive) return -1;
+
+#ifdef FS_DEBUG_FIX_ARCHIVE
+	if (!FSDEBUG_FixArchive(&archive)) return -1;
+#endif
+
+	Result ret;
+	Handle dirHandle;
+
+	ret = FSUSER_OpenDirectory(&dirHandle, *archive, fsMakePath(PATH_ASCII, path));
+	r(" > FSUSER_OpenDirectory: %lx\n", ret);
+
+	if (R_SUCCEEDED(ret))
+	{
+		FSDIR_Close(dirHandle);
+	}
+
+	return R_SUCCEEDED(ret);
+}
+
 Result fsCopyFile(char* srcPath, FS_Archive* srcArchive, char* dstPath, FS_Archive* dstArchive, u32 attributes, bool overwrite)
 {
 	if (!srcPath || !srcArchive || !dstPath || !dstArchive) return -1;
@@ -29,18 +73,6 @@ Result fsCopyFile(char* srcPath, FS_Archive* srcArchive, char* dstPath, FS_Archi
 
 	consoleLog("fsCopyFile(\"%s\", %li, \"%s\", %li)\n", srcPath, srcArchive->id, dstPath, dstArchive->id);
 
-	ret = FSUSER_OpenFile(&dstHandle, *dstArchive, fsMakePath(PATH_ASCII, dstPath), FS_OPEN_READ, FS_ATTRIBUTE_NONE);
-	r(" > FSUSER_OpenFile: %lx\n", ret);
-
-	if (R_SUCCEEDED(ret))
-	{
-		ret = FSFILE_Close(dstHandle);
-		r(" > FSFILE_Close: %lx\n", ret);
-
-		if (!overwrite)
-			return FS_OVERWRITE;
-	}
-
 	ret = FSUSER_OpenFile(&dstHandle, *dstArchive, fsMakePath(PATH_ASCII, dstPath), FS_OPEN_WRITE | FS_OPEN_CREATE, attributes);
 	r(" > FSUSER_OpenFile: %lx\n", ret);
 	if (R_FAILED(ret)) return ret;
@@ -53,8 +85,6 @@ Result fsCopyFile(char* srcPath, FS_Archive* srcArchive, char* dstPath, FS_Archi
 		u8* buffer;
 		u32 bytes = 0;
 		u64 size = 0;
-
-		consoleLog("src: %lu\ndst: %lu\n\n", srcHandle, dstHandle);
 
 		ret = FSFILE_GetSize(srcHandle, &size);
 		r(" > FSFILE_GetSize: %lx\n", ret);
@@ -75,7 +105,7 @@ Result fsCopyFile(char* srcPath, FS_Archive* srcArchive, char* dstPath, FS_Archi
 	ret = FSFILE_Close(dstHandle);
 	r(" > FSFILE_Close: %lx\n", ret);
 
-	return 0;
+	return ret;
 }
 
 Result fsScanDir(fsEntry* dir, FS_Archive* archive, bool rec)
