@@ -1,6 +1,7 @@
 #pragma once
 /**
  * @file console.h
+ * @brief Console Module
  */
 
 #include <3ds/console.h>

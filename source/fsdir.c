@@ -17,7 +17,7 @@ Result fsStackPush(fsStack* stack, s16 offsetId, s16 selectedId)
 {
 	if (!stack) return -1;
 
-	fsStackNode* last = (fsStackNode*) malloc(1 * sizeof(fsStackNode));
+	fsStackNode* last = (fsStackNode*) malloc(sizeof(fsStackNode));
 	last->offsetId = offsetId;
 	last->selectedId = selectedId;
 	last->prev = stack->last;	
@@ -69,7 +69,6 @@ Result fsDirInit(void)
 	strcpy(saveDir.entry.name, "/"); // TODO Replace by "/"
 	strcpy(sdmcDir.entry.name, "/"); // TODO Replace by "/"
 
-	// saveDir.archive = &sdmcArchive; // TODO Remove&Uncomment
 	saveDir.archive = &saveArchive;
 	saveDir.entryOffsetId = 0;
 	fsDirRefreshDir(&saveDir);
@@ -194,7 +193,7 @@ void fsDirSwitch(fsDir* dir)
 
 void fsDirMove(s16 count)
 {
-	// That bitch was pretty hard... :/
+	// That bitchy was pretty hard... :/
 
 	currentDir->entrySelectedId += count;
 
@@ -227,7 +226,7 @@ void fsDirMove(s16 count)
 
 Result fsDirGotoParentDir(void)
 {
-	consoleLog("Opening -> %s/\n", currentDir->entrySelected->name);
+	consoleLog("Opening -> %s/../\n", currentDir->entry.name);
 
 	Result ret = 1;
 	if (!currentDir->entry.isRootDirectory)
@@ -267,7 +266,8 @@ Result fsDirGotoSubDir(void)
 }
 
 /**
- * @todo comment
+ * @brief Displays the overwrite warning an wait for a key.
+ * @return Whether the waited key was pressed.
  */
 static bool fsWaitOverwrite()
 {
@@ -278,7 +278,8 @@ static bool fsWaitOverwrite()
 }
 
 /**
- * @todo comment
+ * @brief Displays the delete warning an wait for a key.
+ * @return Whether the waited key was pressed.
  */
 static bool fsWaitDelete()
 {
@@ -376,7 +377,7 @@ static Result fsDirCopy(fsEntry* srcEntry, fsDir* srcDir, fsDir* dstDir, bool ov
 			consoleLog("Overwrite validated!\n");
 		}
 
-		return fsCopyFile(srcPath, srcDir->archive, dstPath, dstDir->archive, srcEntry->attributes, overwrite);
+		return fsCopyFile(srcPath, srcDir->archive, dstPath, dstDir->archive, srcEntry->attributes);
 	}
 
 	return 1;

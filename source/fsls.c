@@ -29,6 +29,7 @@ bool fsFileExists(char* path, FS_Archive* archive)
 	if (R_SUCCEEDED(ret))
 	{
 		FSFILE_Close(fileHandle);
+		r(" > FSFILE_Close\n");
 	}
 
 	return R_SUCCEEDED(ret);
@@ -51,12 +52,13 @@ bool fsDirExists(char* path, FS_Archive* archive)
 	if (R_SUCCEEDED(ret))
 	{
 		FSDIR_Close(dirHandle);
+		r(" > FSDIR_Close\n");
 	}
 
 	return R_SUCCEEDED(ret);
 }
 
-Result fsCopyFile(char* srcPath, FS_Archive* srcArchive, char* dstPath, FS_Archive* dstArchive, u32 attributes, bool overwrite)
+Result fsCopyFile(char* srcPath, FS_Archive* srcArchive, char* dstPath, FS_Archive* dstArchive, u32 attributes)
 {
 	if (!srcPath || !srcArchive || !dstPath || !dstArchive) return -1;
 
@@ -100,10 +102,10 @@ Result fsCopyFile(char* srcPath, FS_Archive* srcArchive, char* dstPath, FS_Archi
 		free(buffer);
 	}
 
-	ret = FSFILE_Close(srcHandle);
-	r(" > FSFILE_Close: %lx\n", ret);
-	ret = FSFILE_Close(dstHandle);
-	r(" > FSFILE_Close: %lx\n", ret);
+	FSFILE_Close(srcHandle);
+	r(" > FSFILE_Close\n");
+	FSFILE_Close(dstHandle);
+	r(" > FSFILE_Close\n");
 
 	return ret;
 }
@@ -254,7 +256,8 @@ Result fsScanDir(fsEntry* dir, FS_Archive* archive, bool rec)
 		}
 	} while (entriesRead > 0);
 
-	ret = FSDIR_Close(dirHandle);
+	FSDIR_Close(dirHandle);
+	r(" > FSDIR_Close\n");
 
 	return ret;
 }

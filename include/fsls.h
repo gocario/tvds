@@ -1,6 +1,7 @@
 #pragma once
 /**
  * @file fsls.h
+ * @brief Filesystem Listing Module
  */
 
 #include <3ds/services/fs.h>
@@ -25,41 +26,60 @@ typedef struct fsEntry
 } fsEntry;
 
 /**
- * @todo comment
+ * @brief Checks if a file exists.
+ * @param path The path of the file.
+ * @param archive The archive of the file.
+ * @return Whether the file exists.
  */
 bool fsFileExists(char* path, FS_Archive* archive);
 
 /**
- * @todo comment
+ * @brief Checks if a directory exists.
+ * @param path The path of the directory.
+ * @param archive The archive of the directory.
+ * @return Whether the directory exists.
  */
 bool fsDirExists(char* path, FS_Archive* archive);
 
 /**
- * @todo comment
+ * @brief Copies a file from an archive to another archive.
+ * @param srcPath The path of the source file/directory.
+ * @param srcArchive The archive of the source file/directory.
+ * @param dstPath The path of the destination file/directory.
+ * @param dstArchive The archive of the destination file/directory.
+ * @param attributes The attributes of the file/directory.
  */
-Result fsCopyFile(char* srcPath, FS_Archive* srcArchive, char* dstPath, FS_Archive* dstArchive, u32 attributes, bool overwrite);
+Result fsCopyFile(char* srcPath, FS_Archive* srcArchive, char* dstPath, FS_Archive* dstArchive, u32 attributes);
 
 /**
- * @todo comment
+ * @brief Scans a directory based on an archive.
+ * @param dir The directory to scan.
+ * @param archive The archive to scan.
+ * @param rec Whether the scan is recursive.
  */
 Result fsScanDir(fsEntry* dir, FS_Archive* archive, bool rec);
 
 /**
- * @todo comment
+ * @brief Frees the entries of a directory.
+ * @param dir The directory to free.
  */
 Result fsFreeDir(fsEntry* dir);
 
 /**
- * @todo comment
+ * @brief Adds a virtual entry, which is the parentdir of a directory.
+ * @param dir The directory.
  */
 Result fsAddParentDir(fsEntry* dir);
 
 /**
- * @todo comment
+ * @brief Goes to the parentdir of a directory.
+ * @param dir The directory.
  */
 Result fsGotoParentDir(fsEntry* dir);
 
 /**
- * @todo comment
+ * @brief Goes to a subdir of a directory.
+ * @param dir The directory.
+ * @param subDir The subdir path.
  */
 Result fsGotoSubDir(fsEntry* dir, char* subDir);

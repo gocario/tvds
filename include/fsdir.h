@@ -1,6 +1,7 @@
 #pragma once
 /**
  * @file fsdir.h
+ * @brief Filesystem Directory Module
  */
 
 #include "fsls.h"
