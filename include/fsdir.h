@@ -124,3 +124,41 @@ Result fsDirCopyCurrentFolder(bool overwrite);
  * @brief Deletes the current file/folder.
  */
 Result fsDirDeleteCurrentFile(void);
+
+extern fsDir backDir;
+
+/**
+ * @brief Initializes fsBack.
+ */
+Result fsBackInit(u64 titleid);
+
+/**
+ * @brief Exits fsBack.
+ */
+Result fsBackExit(void);
+
+/**
+ * @brief Prints the save dir in its console.
+ */
+void fsBackPrint(void);
+
+/**
+ * @brief Moves the cursor backup.
+ * @param count The count to move the cursor.
+ */
+void fsBackMove(s16 count);
+
+/**
+ * @brief Exports a new backup. (save->sdmc)
+ */
+Result fsBackExport(void);
+
+/**
+ * @brief Imports the current backup. (sdmc->save)
+ */
+Result fsBackImport(void);
+
+/**
+ * @brief Deletes the current backup.
+ */ 
+Result fsBackDelete(void);

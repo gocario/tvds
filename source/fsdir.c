@@ -4,6 +4,7 @@
 #include "key.h"
 #include "console.h"
 
+#include <3ds/os.h>
 #include <3ds/result.h>
 
 #include <stdio.h>
@@ -407,5 +408,179 @@ Result fsDirDeleteCurrentFile(void)
 
 	Result ret = FS_DeleteFile(path, currentDir->archive);
 	fsDirRefreshDir(currentDir);
+	return ret;
+}
+
+fsDir backDir;
+
+Result fsBackInit(u64 titleid)
+{
+	memset(&backDir, 0, sizeof(fsDir));
+
+	sprintf(backDir.entry.name, "/backup/%016llx", titleid);
+	FS_CreateDirectory("/backup/", &sdmcArchive);
+	FS_CreateDirectory(backDir.entry.name, &sdmcArchive);
+
+	backDir.archive = &sdmcArchive;
+	backDir.entryOffsetId = 0;
+	fsDirRefreshDir(&backDir);
+
+	return 0;
+}
+
+Result fsBackExit(void)
+{
+	fsFreeDir(&backDir.entry);
+
+	while (fsStackPop(&backDir.entryStack, NULL, NULL) == 0);
+
+	return 0;
+}
+
+void fsBackPrint(void)
+{
+	s32 i = 0;
+	u8 row = 3;
+	fsEntry* next = backDir.entry.firstEntry;
+	
+	// Skip the first off-screen entries
+	for (; next && i < backDir.entryOffsetId; i++)
+	{
+		next = next->nextEntry;
+	}
+
+	consoleClear();
+	
+	consoleResetColor();
+	printf("\x1B[0;0HBackup data:");
+	consoleForegroundColor(TEAL);
+	printf("\x1B[1;0H%.25s", backDir.entry.name);
+	consoleResetColor();
+
+	for (; next && i < backDir.entry.entryCount && i < backDir.entryOffsetId + entryPrintCount; i++)
+	{
+		// If the entry is the current entry
+		if (backDir.entrySelectedId == i)
+		{
+			consoleBackgroundColor(SILVER);
+			if (next->isDirectory) consoleForegroundColor(TEAL);
+			else consoleForegroundColor(BLACK);
+			// Blank placeholder
+			printf("\x1B[%u;0H \a                       ", row);
+
+			// Tricky-hacky
+			backDir.entrySelected = next;
+		}
+		// Else if the entry is just a directory or a simple file
+		else if (next->isDirectory) consoleForegroundColor(CYAN);
+		else consoleForegroundColor(WHITE);
+		// Display entry's name
+		printf("\x1B[%u;3H%.22s", row++, next->name);
+		consoleResetColor();
+
+		// Iterate though linked list
+		next = next->nextEntry;
+	}
+}
+
+void fsBackMove(s16 count)
+{
+	// That bitchy was pretty hard... :/
+
+	backDir.entrySelectedId += count;
+
+	if (backDir.entrySelectedId < 0)
+	{
+		backDir.entrySelectedId = backDir.entry.entryCount-1;
+		backDir.entryOffsetId = (backDir.entry.entryCount > entryPrintCount ?
+			backDir.entry.entryCount - entryPrintCount : 0);
+	}
+
+	if (backDir.entrySelectedId > backDir.entry.entryCount-1)
+	{
+		backDir.entrySelectedId = 0;
+		backDir.entryOffsetId = 0;
+	}
+
+	if (backDir.entryOffsetId >= backDir.entrySelectedId)
+	{
+		backDir.entryOffsetId = (backDir.entrySelectedId > 0 ?
+			backDir.entrySelectedId-1 : backDir.entrySelectedId);
+	}
+
+	else if (backDir.entrySelectedId > entryPrintCount-2 && count > 0 &&
+		backDir.entryOffsetId + entryPrintCount-2 < backDir.entrySelectedId)
+	{
+		backDir.entryOffsetId = (backDir.entrySelectedId < backDir.entry.entryCount-1 ?
+			backDir.entrySelectedId+1 : backDir.entrySelectedId) - entryPrintCount+1;
+	}
+}
+
+Result fsBackExport(void)
+{
+	// (save->sdmc)
+	
+	// TODO: Create the new entry backup.
+
+	// TODO: Copy the whole save archive content to the new entry.
+
+	Result ret;
+
+	fsEntry entry;
+	sprintf(entry.name, "%s/%llu/", backDir.entry.name, osGetTime()); // TODO: Date/Time
+
+	fsDir saveDir;
+	memset(&saveDir, 0, sizeof(fsDir));
+	strcpy(saveDir.entry.name, "/");
+	saveDir.archive = &saveArchive;
+
+	FS_CreateDirectory(entry.name, &sdmcArchive);
+
+	fsScanDir(&saveDir.entry, saveDir.archive, false);
+
+	ret = fsDirCopy(&entry, &saveDir, &backDir, true);
+
+	fsFreeDir(&saveDir.entry);
+
+	return ret;
+}
+
+Result fsBackImport(void)
+{
+	// (sdmc->save)
+
+	// TODO: Delete the whole save archive content.
+
+	// TODO: Copy the selected entry content to the save archive.
+
+	Result ret;
+
+	fsEntry entry;
+	sprintf(entry.name, "%s/%s/", backDir.entry.name, backDir.entrySelected->name);
+
+	fsDir saveDir;
+	memset(&saveDir, 0, sizeof(fsDir));
+	strcpy(saveDir.entry.name, "/");
+	saveDir.archive = &saveArchive;
+
+	ret = fsDirCopy(&currentDir->entry, &backDir, &saveDir, true);
+	fsDirRefreshDir(dickDir);
+	
+	return ret;
+}
+
+Result fsBackDelete(void)
+{
+	if (!fsWaitDelete()) return FS_USER_INTERRUPT;
+	consoleLog("Delete validated!\n");
+
+	char path[FS_MAX_PATH_LENGTH];
+	memset(path, 0, FS_MAX_PATH_LENGTH);
+	strcpy(path, backDir.entry.name);
+	strcat(path, backDir.entrySelected->name);
+	consoleLog("\a%s\n", path);
+
+	Result ret = FS_DeleteFile(path, backDir.archive);
+	fsDirRefreshDir(&backDir);
 	return ret;
 }
