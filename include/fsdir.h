@@ -21,7 +21,7 @@ typedef struct fsStackNode
 /// A stack for fsDir.
 typedef struct
 {
-	fsStackNode* last;
+	struct fsStackNode* last;
 } fsStack;
 
 /**
@@ -81,6 +81,12 @@ void fsDirPrintCurrent(void);
  * @brief Prints the dick dir in its console.
  */
 void fsDirPrintDick(void);
+
+/**
+ * @brief Frees and scans a directory
+ * @param dir The dir to refresh
+ */
+void fsDirRefreshDir(fsDir* dir);
 
 /**
  * @brief Switchs the current dir.

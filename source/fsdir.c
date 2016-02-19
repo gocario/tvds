@@ -47,20 +47,6 @@ static fsDir* currentDir;
 static fsDir* dickDir;
 static u32 entryPrintCount = 20;
 
-/**
- * @brief Refreshs the current dir (freeing and scanning it)
- */
-static void fsDirRefreshDir(fsDir* _dir)
-{
-	fsDir* dir = (_dir ? _dir : currentDir);
-	fsFreeDir(&dir->entry);
-	fsScanDir(&dir->entry, dir->archive, false);
-	fsAddParentDir(&dir->entry);
-
-	dir->entryOffsetId = 0;
-	dir->entrySelectedId = 0;
-}
-
 Result fsDirInit(void)
 {
 	memset(&saveDir, 0, sizeof(fsDir));
@@ -173,6 +159,17 @@ void fsDirPrintDick(void)
 		fsDirPrintSave();
 	else if (dickDir == &sdmcDir)
 		fsDirPrintSdmc();
+}
+
+void fsDirRefreshDir(fsDir* _dir)
+{
+	fsDir* dir = (_dir ? _dir : currentDir);
+	fsFreeDir(&dir->entry);
+	fsScanDir(&dir->entry, dir->archive, false);
+	fsAddParentDir(&dir->entry);
+
+	dir->entryOffsetId = 0;
+	dir->entrySelectedId = 0;
 }
 
 void fsDirSwitch(fsDir* dir)
