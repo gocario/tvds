@@ -147,6 +147,42 @@ Result FS_CreateDirectory(char* path, FS_Archive* archive)
 	return ret;
 }
 
+Result FS_DeleteDirectory(char* path, FS_Archive* archive)
+{
+	if (!path || !archive) return -1;
+	
+#ifdef FS_DEBUG_FIX_ARCHIVE
+	if (!FSDEBUG_FixArchive(&archive)) return -1;
+#endif
+
+	Result ret;
+
+	debug_print("FS_DeleteDirectory:\n");
+
+	ret = FSUSER_DeleteDirectory(*archive, fsMakePath(PATH_ASCII, path));
+	r(" > FSUSER_DeleteDirectory: %lx\n", ret);
+
+	return ret;
+}
+
+Result FS_DeleteDirectoryRecursively(char* path, FS_Archive* archive)
+{
+	if (!path || !archive) return -1;
+	
+#ifdef FS_DEBUG_FIX_ARCHIVE
+	if (!FSDEBUG_FixArchive(&archive)) return -1;
+#endif
+
+	Result ret;
+
+	debug_print("FS_DeleteDirectoryRecursively:\n");
+
+	ret = FSUSER_DeleteDirectoryRecursively(*archive, fsMakePath(PATH_ASCII, path));
+	r(" > FSUSER_DeleteDirectoryRecursively: %lx\n", ret);
+
+	return ret;
+}
+
 Result FS_CommitArchive(FS_Archive* archive)
 {
 	if (!archive) return -1;

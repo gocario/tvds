@@ -73,6 +73,20 @@ Result FS_DeleteFile(char* path, FS_Archive* archive);
 Result FS_CreateDirectory(char* path, FS_Archive* archive);
 
 /**
+ * @brief Deletes a directory (path).
+ * @param path The path of the directory to delete.
+ * @param archive The archive where the directory is located.
+ */
+Result FS_DeleteDirectory(char* path, FS_Archive* archive);
+
+/**
+ * @brief Deletes a directory recusively (path).
+ * @param path The path of the directory to delete.
+ * @param archive The archive where the directory is located.
+ */
+Result FS_DeleteDirectoryRecursively(char* path, FS_Archive* archive);
+
+/**
  * @brief Commits an archive.
  * @param The archive to commit.
  */
