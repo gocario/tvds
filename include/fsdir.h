@@ -49,7 +49,9 @@ typedef struct fsDir
 	FS_Archive* archive;	///< The archive of the dir.
 } fsDir;
 
+/// The save fsDir for fsDir.
 extern fsDir saveDir;
+/// The sdmc fsDir for fsDir.
 extern fsDir sdmcDir;
 
 /**
@@ -111,9 +113,9 @@ Result fsDirGotoParentDir(void);
 Result fsDirGotoSubDir(void);
 
 /**
- * @brief Copies the current file/folder to the other dir.
+ * @brief Copies the current entry to the other dir.
  */
-Result fsDirCopyCurrentFile(bool overwrite);
+Result fsDirCopyCurrentEntry(bool overwrite);
 
 /**
  * @brief Copies the current directory to the other dir.
@@ -121,10 +123,11 @@ Result fsDirCopyCurrentFile(bool overwrite);
 Result fsDirCopyCurrentFolder(bool overwrite);
 
 /**
- * @brief Deletes the current file/folder.
+ * @brief Deletes the current entry.
  */
-Result fsDirDeleteCurrentFile(void);
+Result fsDirDeleteCurrentEntry(void);
 
+/// The sdmc fsDir for fsBack.
 extern fsDir backDir;
 
 /**

@@ -381,7 +381,7 @@ static Result fsDirCopy(fsEntry* srcEntry, fsDir* srcDir, fsDir* dstDir, bool ov
 	return 1;
 }
 
-Result fsDirCopyCurrentFile(bool overwrite)
+Result fsDirCopyCurrentEntry(bool overwrite)
 {
 	Result ret = fsDirCopy(currentDir->entrySelected, currentDir, dickDir, overwrite);
 	fsDirRefreshDir(dickDir);
@@ -395,10 +395,12 @@ Result fsDirCopyCurrentFolder(bool overwrite)
 	return ret;
 }
 
-Result fsDirDeleteCurrentFile(void)
+Result fsDirDeleteCurrentEntry(void)
 {
 	if (!fsWaitDelete()) return FS_USER_INTERRUPT;
 	consoleLog("Delete validated!\n");
+
+	Result ret = -3;
 
 	char path[FS_MAX_PATH_LENGTH];
 	memset(path, 0, FS_MAX_PATH_LENGTH);
@@ -406,8 +408,20 @@ Result fsDirDeleteCurrentFile(void)
 	strcat(path, currentDir->entrySelected->name);
 	consoleLog("\a%s\n", path);
 
-	Result ret = FS_DeleteFile(path, currentDir->archive);
-	fsDirRefreshDir(currentDir);
+	if (currentDir->entrySelected->isDirectory)
+	{
+		if (!currentDir->entrySelected->isRealDirectory)
+		{
+			ret = FS_DeleteDirectoryRecursively(path, currentDir->archive);
+			fsDirRefreshDir(currentDir);
+		}
+	}
+	else
+	{
+		ret = FS_DeleteFile(path, currentDir->archive);
+		fsDirRefreshDir(currentDir);
+	}
+
 	return ret;
 }
 

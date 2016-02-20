@@ -14,7 +14,7 @@
 typedef enum {
 	STATE_EOF,			///< End of file
 	STATE_ERROR,		///< Error
-	STATE_BROWSE,		///< Browse the dir
+	STATE_BROWSE,		///< Browse
 } State;
 
 static State state;
@@ -163,15 +163,15 @@ int main(int argc, char* argv[])
 
 				if (kDown & KEY_X)
 				{
-					ret = fsDirDeleteCurrentFile();
-					consoleLog("   > fsDirDeleteCurrentFile: %lx\n", ret);
+					ret = fsDirDeleteCurrentEntry();
+					consoleLog("   > fsDirDeleteCurrentEntry: %lx\n", ret);
 					fsDirPrintCurrent();
 				}
 
 				if (kDown & KEY_Y)
 				{
-					ret = fsDirCopyCurrentFile(false);
-					consoleLog("   > fsDirCopyCurrentFile: %lx\n", ret);
+					ret = fsDirCopyCurrentEntry(false);
+					consoleLog("   > fsDirCopyCurrentEntry: %lx\n", ret);
 					fsDirPrintDick();
 				}
 
