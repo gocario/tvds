@@ -162,12 +162,12 @@ void fsDirPrintDick(void)
 		fsDirPrintSdmc();
 }
 
-void fsDirRefreshDir(fsDir* _dir)
+void fsDirRefreshDir(fsDir* _dir, bool addParentDir)
 {
 	fsDir* dir = (_dir ? _dir : currentDir);
 	fsFreeDir(&dir->entry);
 	fsScanDir(&dir->entry, dir->archive, false);
-	fsAddParentDir(&dir->entry);
+	if (addParentDir) fsAddParentDir(&dir->entry);
 
 	dir->entryOffsetId = 0;
 	dir->entrySelectedId = 0;
@@ -232,7 +232,7 @@ Result fsDirGotoParentDir(void)
 		ret = fsGotoParentDir(&currentDir->entry);
 		if (ret == 0)
 		{
-			fsDirRefreshDir(currentDir);
+			fsDirRefreshDir(currentDir, true);
 			fsStackPop(&currentDir->entryStack, &currentDir->entryOffsetId, &currentDir->entrySelectedId);
 		}
 	}
@@ -256,7 +256,7 @@ Result fsDirGotoSubDir(void)
 			if (ret == 0)
 			{
 				fsStackPush(&currentDir->entryStack, currentDir->entryOffsetId, currentDir->entrySelectedId);
-				fsDirRefreshDir(currentDir);
+				fsDirRefreshDir(currentDir, true);
 			}
 		}
 	}
@@ -384,14 +384,14 @@ static Result fsDirCopy(fsEntry* srcEntry, fsDir* srcDir, fsDir* dstDir, bool ov
 Result fsDirCopyCurrentEntry(bool overwrite)
 {
 	Result ret = fsDirCopy(currentDir->entrySelected, currentDir, dickDir, overwrite);
-	fsDirRefreshDir(dickDir);
+	fsDirRefreshDir(dickDir, true);
 	return ret;
 }
 
 Result fsDirCopyCurrentFolder(bool overwrite)
 {
 	Result ret = fsDirCopy(&currentDir->entry, currentDir, dickDir, overwrite);
-	fsDirRefreshDir(dickDir);
+	fsDirRefreshDir(dickDir, true);
 	return ret;
 }
 
@@ -413,13 +413,13 @@ Result fsDirDeleteCurrentEntry(void)
 		if (!currentDir->entrySelected->isRealDirectory)
 		{
 			ret = FS_DeleteDirectoryRecursively(path, currentDir->archive);
-			fsDirRefreshDir(currentDir);
+			fsDirRefreshDir(currentDir, true);
 		}
 	}
 	else
 	{
 		ret = FS_DeleteFile(path, currentDir->archive);
-		fsDirRefreshDir(currentDir);
+		fsDirRefreshDir(currentDir, true);
 	}
 
 	return ret;
@@ -431,13 +431,13 @@ Result fsBackInit(u64 titleid)
 {
 	memset(&backDir, 0, sizeof(fsDir));
 
-	sprintf(backDir.entry.name, "/backup/%016llx", titleid);
+	sprintf(backDir.entry.name, "/backup/%016llx/", titleid);
 	FS_CreateDirectory("/backup/", &sdmcArchive);
 	FS_CreateDirectory(backDir.entry.name, &sdmcArchive);
 
 	backDir.archive = &sdmcArchive;
 	backDir.entryOffsetId = 0;
-	fsDirRefreshDir(&backDir);
+	fsDirRefreshDir(&backDir, false);
 
 	return 0;
 }
@@ -463,6 +463,7 @@ void fsBackPrint(void)
 		next = next->nextEntry;
 	}
 
+	consoleSelectNew(&sdmcConsole);
 	consoleClear();
 	
 	consoleResetColor();
@@ -495,6 +496,8 @@ void fsBackPrint(void)
 		// Iterate though linked list
 		next = next->nextEntry;
 	}
+
+	consoleSelectLast();
 }
 
 void fsBackMove(s16 count)

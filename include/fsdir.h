@@ -88,7 +88,7 @@ void fsDirPrintDick(void);
  * @brief Frees and scans a directory
  * @param dir The dir to refresh
  */
-void fsDirRefreshDir(fsDir* dir);
+void fsDirRefreshDir(fsDir* dir, bool addParentDir);
 
 /**
  * @brief Switchs the current dir.
