@@ -143,7 +143,12 @@ Result fsBackExit(void);
 /**
  * @brief Prints the save dir in its console.
  */
-void fsBackPrint(void);
+void fsBackPrintSave(void);
+
+/**
+ * @brief Prints the backup dir in its console.
+ */
+void fsBackPrintBackup(void);
 
 /**
  * @brief Moves the cursor backup.

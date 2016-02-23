@@ -49,7 +49,7 @@ bool FSDEBUG_FixArchive(FS_Archive** archive)
 Result FS_ReadFile(char* path, void* dst, FS_Archive* archive, u64 maxSize, u32* bytesRead)
 {
 	if (!path || !dst || !archive || !bytesRead) return -1;
-	
+
 #ifdef FS_DEBUG_FIX_ARCHIVE
 	if (!FSDEBUG_FixArchive(&archive)) return -1;
 #endif
@@ -114,7 +114,7 @@ Result FS_WriteFile(char* path, void* src, u64 size, FS_Archive* archive, u32* b
 Result FS_DeleteFile(char* path, FS_Archive* archive)
 {
 	if (!path || !archive) return -1;
-	
+
 #ifdef FS_DEBUG_FIX_ARCHIVE
 	if (!FSDEBUG_FixArchive(&archive)) return -1;
 #endif
@@ -132,7 +132,7 @@ Result FS_DeleteFile(char* path, FS_Archive* archive)
 Result FS_CreateDirectory(char* path, FS_Archive* archive)
 {
 	if (!path || !archive) return -1;
-	
+
 #ifdef FS_DEBUG_FIX_ARCHIVE
 	if (!FSDEBUG_FixArchive(&archive)) return -1;
 #endif
@@ -150,7 +150,7 @@ Result FS_CreateDirectory(char* path, FS_Archive* archive)
 Result FS_DeleteDirectory(char* path, FS_Archive* archive)
 {
 	if (!path || !archive) return -1;
-	
+
 #ifdef FS_DEBUG_FIX_ARCHIVE
 	if (!FSDEBUG_FixArchive(&archive)) return -1;
 #endif
@@ -168,7 +168,7 @@ Result FS_DeleteDirectory(char* path, FS_Archive* archive)
 Result FS_DeleteDirectoryRecursively(char* path, FS_Archive* archive)
 {
 	if (!path || !archive) return -1;
-	
+
 #ifdef FS_DEBUG_FIX_ARCHIVE
 	if (!FSDEBUG_FixArchive(&archive)) return -1;
 #endif
@@ -186,7 +186,7 @@ Result FS_DeleteDirectoryRecursively(char* path, FS_Archive* archive)
 Result FS_CommitArchive(FS_Archive* archive)
 {
 	if (!archive) return -1;
-	
+
 	Result ret;
 
 	debug_print("FS_CommitArchive:\n");
@@ -240,7 +240,7 @@ Result FS_Init(void)
 Result FS_Exit(void)
 {
 	Result ret = 0;
-	
+
 	debug_print("FS_Exit:\n");
 
 	if (sdmcInitialized)

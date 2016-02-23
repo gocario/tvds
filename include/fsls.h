@@ -10,6 +10,7 @@
 #define FS_MAX_PATH_LENGTH (0x400) // 0x400
 
 #define FS_OUT_OF_RESOURCE (0xD8604664)
+#define FS_OUT_OF_RESOURCE_2 (0xC86044CD)
 
 /// An entry of a file or a directory.
 typedef struct fsEntry

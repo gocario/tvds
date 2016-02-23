@@ -15,7 +15,7 @@
 bool fsFileExists(char* path, FS_Archive* archive)
 {
 	if (!path || !archive) return -1;
-	
+
 #ifdef FS_DEBUG_FIX_ARCHIVE
 	if (!FSDEBUG_FixArchive(&archive)) return -1;
 #endif
@@ -98,7 +98,7 @@ Result fsCopyFile(char* srcPath, FS_Archive* srcArchive, char* dstPath, FS_Archi
 
 		ret = FSFILE_Write(dstHandle, &bytes, 0, buffer, size, FS_WRITE_FLUSH);
 		r(" > FSFILE_Read: %lx\n", ret);
-		
+
 		free(buffer);
 	}
 
@@ -152,7 +152,7 @@ Result fsScanDir(fsEntry* dir, FS_Archive* archive, bool rec)
 			unicodeToChar(entry->name, dirEntry.name, FS_MAX_FPATH_LENGTH);
 
 			consoleLog("Entry: %s (%i)\n", entry->name, dir->entryCount+1);
-			
+
 			entry->attributes = dirEntry.attributes;
 			entry->isDirectory = entry->attributes & FS_ATTRIBUTE_DIRECTORY;
 			entry->isRealDirectory = true;
@@ -194,7 +194,7 @@ Result fsScanDir(fsEntry* dir, FS_Archive* archive, bool rec)
 									entry->nextEntry = tmpPrevEntry->nextEntry;
 									tmpPrevEntry->nextEntry = entry;
 								}
-								
+
 								tmpPrevEntry = NULL;
 							}
 							else
@@ -294,12 +294,34 @@ Result fsAddParentDir(fsEntry* dir)
 
 	// If the dir is the root directory. (no!)
 	dir->isRootDirectory = !strcmp("/", dir->name) || !strcmp("", dir->name);
-	
-	if (!dir->isRootDirectory)
+
+	if (dir->isRootDirectory)
 	{
 		if (dir->firstEntry && !dir->firstEntry->isRealDirectory)
 			return 2;
-		
+
+		fsEntry* root = (fsEntry*) malloc(sizeof(fsEntry));
+		memset(root, 0, sizeof(fsEntry));
+
+		strcpy(root->name, "/");
+		root->attributes = dir->attributes | FS_ATTRIBUTE_DIRECTORY;
+		root->isDirectory = true;
+		root->isRealDirectory = false;
+		root->isRootDirectory = true;
+		root->nextEntry = dir->firstEntry;
+		root->firstEntry = NULL;
+		root->entryCount = 0;
+
+		dir->firstEntry = root;
+		dir->entryCount++;
+
+		return 0;
+	}
+	else
+	{
+		if (dir->firstEntry && !dir->firstEntry->isRealDirectory)
+			return 2;
+
 		fsEntry* root = (fsEntry*) malloc(sizeof(fsEntry));
 		memset(root, 0, sizeof(fsEntry));
 

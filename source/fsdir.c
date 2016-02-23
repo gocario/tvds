@@ -10,9 +10,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
-#define r(format, args...) consoleLog(format, ##args)
-// #define r(format, args...)
+#include <time.h>
 
 Result fsStackPush(fsStack* stack, s16 offsetId, s16 selectedId)
 {
@@ -21,7 +19,7 @@ Result fsStackPush(fsStack* stack, s16 offsetId, s16 selectedId)
 	fsStackNode* last = (fsStackNode*) malloc(sizeof(fsStackNode));
 	last->offsetId = offsetId;
 	last->selectedId = selectedId;
-	last->prev = stack->last;	
+	last->prev = stack->last;
 	stack->last = last;
 
 	return last->prev != NULL;
@@ -58,11 +56,11 @@ Result fsDirInit(void)
 
 	saveDir.archive = &saveArchive;
 	saveDir.entryOffsetId = 0;
-	fsDirRefreshDir(&saveDir);
+	fsDirRefreshDir(&saveDir, true);
 
 	sdmcDir.archive = &sdmcArchive;
 	sdmcDir.entryOffsetId = 0;
-	fsDirRefreshDir(&sdmcDir);
+	fsDirRefreshDir(&sdmcDir, true);
 
 	currentDir = &sdmcDir;
 	dickDir = &saveDir;
@@ -86,12 +84,12 @@ Result fsDirExit(void)
  * @param dir The directory to print.
  * @param data An header string to print.
  */
-static void fsDirPrint(fsDir* dir, char* data)
+static void fsDirPrint(fsDir* dir, const char* data)
 {
 	s32 i = 0;
 	u8 row = 3;
 	fsEntry* next = dir->entry.firstEntry;
-	
+
 	// Skip the first off-screen entries
 	for (; next && i < dir->entryOffsetId; i++)
 	{
@@ -99,7 +97,7 @@ static void fsDirPrint(fsDir* dir, char* data)
 	}
 
 	consoleClear();
-	
+
 	consoleResetColor();
 	printf("\x1B[0;0H%s data:", data);
 	consoleForegroundColor(TEAL);
@@ -248,7 +246,10 @@ Result fsDirGotoSubDir(void)
 	{
 		if (!currentDir->entrySelected->isRealDirectory)
 		{
-			ret = fsDirGotoParentDir();
+			if (!currentDir->entrySelected->isRootDirectory)
+			{
+				ret = fsDirGotoParentDir();
+			}
 		}
 		else if (currentDir->entrySelected->isDirectory)
 		{
@@ -264,27 +265,39 @@ Result fsDirGotoSubDir(void)
 }
 
 /**
- * @brief Displays the overwrite warning an wait for a key.
+ * @brief Displays the overwrite warning and wait for a key.
  * @return Whether the waited key was pressed.
  */
 static bool fsWaitOverwrite()
 {
 	consoleLog("Overwrite detected!\n");
-	consoleLog("Press [Select] to confirm overwrite.\n");
+	consoleLog("Press [Select] to confirm the overwrite.\n");
 
 	return doKey(KEY_SELECT);
 }
 
 /**
- * @brief Displays the delete warning an wait for a key.
+ * @brief Displays the delete warning and wait for a key.
  * @return Whether the waited key was pressed.
  */
 static bool fsWaitDelete()
 {
 	consoleLog("Delete asked!\n");
-	consoleLog("Press [Select] to confirm delete.\n");
+	consoleLog("Press [Select] to confirm the delete.\n");
 
 	return doKey(KEY_SELECT);
+}
+
+/**
+ * @brief Displays the out of resource warning and wait for a key.
+ * @return Whether the waited key was pressed.
+ */
+static bool fsWaitOutOfResource()
+{
+	consoleLog("The file was too big for the archive!\n");
+	consoleLog("Press any key to continue.\n");
+
+	return doKey(KEY_ANY);
 }
 
 /**
@@ -303,13 +316,13 @@ static Result fsDirCopy(fsEntry* srcEntry, fsDir* srcDir, fsDir* dstDir, bool ov
 		fsEntry srcPath;
 		// Create another fsEntry for the scan only.
 		srcPath.attributes = srcEntry->attributes;
-		srcPath.isDirectory = true;
-		srcPath.isRealDirectory = true;
-		srcPath.isRootDirectory = !(strcmp("/", srcEntry->name));
+		srcPath.isDirectory = srcEntry->isDirectory;
+		srcPath.isRealDirectory = srcEntry->isRealDirectory;
+		srcPath.isRootDirectory = srcEntry->isRootDirectory;
 
 		memset(srcPath.name, 0, FS_MAX_PATH_LENGTH);
 		strcpy(srcPath.name, dstDir->entry.name);
-		strcat(srcPath.name, srcEntry->name);
+		if (!srcPath.isRootDirectory) strcat(srcPath.name, srcEntry->name);
 		consoleLog("\a%s\n", srcPath.name);
 
 		if (fsDirExists(srcPath.name, dstDir->archive) && !overwrite)
@@ -323,7 +336,7 @@ static Result fsDirCopy(fsEntry* srcEntry, fsDir* srcDir, fsDir* dstDir, bool ov
 		}
 
 		memset(srcPath.name, 0, FS_MAX_PATH_LENGTH);
-		strcpy(srcPath.name, srcDir->entry.name);
+		if (!srcPath.isRootDirectory) strcpy(srcPath.name, srcDir->entry.name);
 		strcat(srcPath.name, srcEntry->name);
 		consoleLog("\a%s\n", srcPath.name);
 
@@ -356,7 +369,7 @@ static Result fsDirCopy(fsEntry* srcEntry, fsDir* srcDir, fsDir* dstDir, bool ov
 	{
 		char srcPath[FS_MAX_PATH_LENGTH];
 		char dstPath[FS_MAX_PATH_LENGTH];
-	
+
 		memset(srcPath, 0, FS_MAX_PATH_LENGTH);
 		strcpy(srcPath, srcDir->entry.name);
 		strcat(srcPath, srcEntry->name);
@@ -375,7 +388,16 @@ static Result fsDirCopy(fsEntry* srcEntry, fsDir* srcDir, fsDir* dstDir, bool ov
 			consoleLog("Overwrite validated!\n");
 		}
 
-		return fsCopyFile(srcPath, srcDir->archive, dstPath, dstDir->archive, srcEntry->attributes);
+		Result ret = fsCopyFile(srcPath, srcDir->archive, dstPath, dstDir->archive, srcEntry->attributes);
+
+		if (ret == FS_OUT_OF_RESOURCE || ret == FS_OUT_OF_RESOURCE_2)
+		{
+			fsWaitOutOfResource();
+
+			FS_DeleteFile(dstPath, dstDir->archive);
+		}
+
+		return ret;
 	}
 
 	return 1;
@@ -390,7 +412,14 @@ Result fsDirCopyCurrentEntry(bool overwrite)
 
 Result fsDirCopyCurrentFolder(bool overwrite)
 {
-	Result ret = fsDirCopy(&currentDir->entry, currentDir, dickDir, overwrite);
+	fsEntry entry;
+	memset(entry.name, 0, FS_MAX_PATH_LENGTH);
+	entry.attributes = currentDir->entry.attributes;
+	entry.isDirectory = true;
+	entry.isRealDirectory = true;
+	entry.isRootDirectory = false;
+
+	Result ret = fsDirCopy(&entry, currentDir, dickDir, overwrite);
 	fsDirRefreshDir(dickDir, true);
 	return ret;
 }
@@ -410,7 +439,7 @@ Result fsDirDeleteCurrentEntry(void)
 
 	if (currentDir->entrySelected->isDirectory)
 	{
-		if (!currentDir->entrySelected->isRealDirectory)
+		if (currentDir->entrySelected->isRealDirectory)
 		{
 			ret = FS_DeleteDirectoryRecursively(path, currentDir->archive);
 			fsDirRefreshDir(currentDir, true);
@@ -451,31 +480,40 @@ Result fsBackExit(void)
 	return 0;
 }
 
-void fsBackPrint(void)
+/**
+ * @brief Prints a directory to the current console.
+ * @param dir The directory to print.
+ * @param data An header string to print.
+ */
+static void fsBackPrint(fsDir* dir, const char* data)
 {
 	s32 i = 0;
 	u8 row = 3;
-	fsEntry* next = backDir.entry.firstEntry;
-	
+	fsEntry* next = dir->entry.firstEntry;
+
 	// Skip the first off-screen entries
-	for (; next && i < backDir.entryOffsetId; i++)
+	for (; next && i < dir->entryOffsetId; i++)
 	{
 		next = next->nextEntry;
 	}
 
+	consoleSelectNew(&saveConsole);
+	consoleClear();
+	consoleSelectLast();
+
 	consoleSelectNew(&sdmcConsole);
 	consoleClear();
-	
+
 	consoleResetColor();
 	printf("\x1B[0;0HBackup data:");
 	consoleForegroundColor(TEAL);
-	printf("\x1B[1;0H%.25s", backDir.entry.name);
+	printf("\x1B[1;0H%.25s", dir->entry.name);
 	consoleResetColor();
 
-	for (; next && i < backDir.entry.entryCount && i < backDir.entryOffsetId + entryPrintCount; i++)
+	for (; next && i < dir->entry.entryCount && i < dir->entryOffsetId + entryPrintCount; i++)
 	{
 		// If the entry is the current entry
-		if (backDir.entrySelectedId == i)
+		if (dir->entrySelectedId == i)
 		{
 			consoleBackgroundColor(SILVER);
 			if (next->isDirectory) consoleForegroundColor(TEAL);
@@ -484,7 +522,7 @@ void fsBackPrint(void)
 			printf("\x1B[%u;0H \a                       ", row);
 
 			// Tricky-hacky
-			backDir.entrySelected = next;
+			dir->entrySelected = next;
 		}
 		// Else if the entry is just a directory or a simple file
 		else if (next->isDirectory) consoleForegroundColor(CYAN);
@@ -497,6 +535,34 @@ void fsBackPrint(void)
 		next = next->nextEntry;
 	}
 
+	consoleSelectLast();
+}
+
+void fsBackPrintSave(void)
+{
+	fsDir saveDir;
+	memset(&saveDir, 0, sizeof(fsDir));
+	strcpy(saveDir.entry.name, "/");
+	saveDir.archive = &saveArchive;
+	saveDir.entryOffsetId = 0;
+	saveDir.entrySelectedId = -1;
+	saveDir.entry.isDirectory = true;
+	saveDir.entry.isRealDirectory = true;
+	saveDir.entry.isRootDirectory = true;
+
+	fsScanDir(&saveDir.entry, saveDir.archive, false);
+
+	consoleSelectNew(&saveConsole);
+	fsBackPrint(&saveDir, "Save");
+	consoleSelectLast();
+
+	fsFreeDir(&saveDir.entry);
+}
+
+void fsBackPrintBackup(void)
+{
+	consoleSelectNew(&sdmcConsole);
+	fsBackPrint(&backDir, "Backup");
 	consoleSelectLast();
 }
 
@@ -536,28 +602,51 @@ void fsBackMove(s16 count)
 Result fsBackExport(void)
 {
 	// (save->sdmc)
-	
+
 	// TODO: Create the new entry backup.
 
 	// TODO: Copy the whole save archive content to the new entry.
 
 	Result ret;
 
-	fsEntry entry;
-	sprintf(entry.name, "%s/%llu/", backDir.entry.name, osGetTime()); // TODO: Date/Time
+	// The current time for the backup name.
+	time_t t_time = time(NULL);
+	struct tm* tm_time = gmtime(&t_time);
 
+	// The backup folder name.
+	char path[FS_MAX_PATH_LENGTH];
+	memset(path, 0, FS_MAX_PATH_LENGTH);
+	sprintf(path, "%04u-%02u-%02u--%02u-%02u-%02u/",
+		tm_time->tm_year+1900,
+		tm_time->tm_mon+1,
+		tm_time->tm_yday,
+		tm_time->tm_hour,
+		tm_time->tm_min+tm_time->tm_sec/60,
+		tm_time->tm_sec%60
+	);
+
+	// The root dir of the save archive.
 	fsDir saveDir;
 	memset(&saveDir, 0, sizeof(fsDir));
 	strcpy(saveDir.entry.name, "/");
 	saveDir.archive = &saveArchive;
+	saveDir.entry.isDirectory = true;
+	saveDir.entry.isRealDirectory = true;
+	saveDir.entry.isRootDirectory = true;
 
-	FS_CreateDirectory(entry.name, &sdmcArchive);
+	// Create the backup directory.
+	ret = FS_CreateDirectory(backDir.entry.name, &sdmcArchive);
 
-	fsScanDir(&saveDir.entry, saveDir.archive, false);
+	// Go to the backup directory.
+	fsFreeDir(&backDir.entry);
+	fsGotoSubDir(&backDir.entry, path);
 
-	ret = fsDirCopy(&entry, &saveDir, &backDir, true);
+	// Copy the current save directory to the sdmc archive
+	ret = fsDirCopy(&saveDir.entry, &saveDir, &backDir, true);
 
-	fsFreeDir(&saveDir.entry);
+	// Reset the current directory to default.
+	fsGotoParentDir(&backDir.entry);
+	fsScanDir(&backDir.entry, backDir.archive, false);
 
 	return ret;
 }
@@ -572,17 +661,37 @@ Result fsBackImport(void)
 
 	Result ret;
 
-	fsEntry entry;
-	sprintf(entry.name, "%s/%s/", backDir.entry.name, backDir.entrySelected->name);
-
+	// The root dir of the save archive.
 	fsDir saveDir;
 	memset(&saveDir, 0, sizeof(fsDir));
 	strcpy(saveDir.entry.name, "/");
 	saveDir.archive = &saveArchive;
+	saveDir.entry.isDirectory = true;
+	saveDir.entry.isRealDirectory = true;
+	saveDir.entry.isRootDirectory = false;
 
-	ret = fsDirCopy(&currentDir->entry, &backDir, &saveDir, true);
-	fsDirRefreshDir(dickDir);
-	
+	// Delete the save archive content.
+	ret = FS_DeleteDirectoryRecursively(saveDir.entry.name, saveDir.archive);
+
+	// Go to the backup directory.
+	fsFreeDir(&backDir.entry);
+	fsGotoSubDir(&backDir.entry, backDir.entrySelected->name);
+
+	// The fake entry to copy the current directory to.
+	fsEntry entry;
+	memset(entry.name, 0, FS_MAX_PATH_LENGTH);
+	entry.attributes = backDir.entry.attributes;
+	entry.isDirectory = true; // backDir.entry.isDirectory
+	entry.isRealDirectory = true; // backDir.entry.isRealDirectory
+	entry.isRootDirectory = false; // backDir.entry.isRootDirectory
+
+	// Copy the current directory content to the save archive.
+	ret = fsDirCopy(&entry, &backDir, &saveDir, true);
+
+	// Reset the current directory to default.
+	fsGotoParentDir(&backDir.entry);
+	fsScanDir(&backDir.entry, backDir.archive, false);
+
 	return ret;
 }
 
@@ -591,13 +700,16 @@ Result fsBackDelete(void)
 	if (!fsWaitDelete()) return FS_USER_INTERRUPT;
 	consoleLog("Delete validated!\n");
 
+	Result ret = -3;
+
 	char path[FS_MAX_PATH_LENGTH];
 	memset(path, 0, FS_MAX_PATH_LENGTH);
 	strcpy(path, backDir.entry.name);
 	strcat(path, backDir.entrySelected->name);
 	consoleLog("\a%s\n", path);
 
-	Result ret = FS_DeleteFile(path, backDir.archive);
-	fsDirRefreshDir(&backDir);
+	ret = FS_DeleteDirectoryRecursively(path, backDir.archive);
+	fsDirRefreshDir(&backDir, false);
+
 	return ret;
 }
