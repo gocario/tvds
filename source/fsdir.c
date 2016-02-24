@@ -106,6 +106,7 @@ static void fsDirPrint(fsDir* dir, const char* data)
 			consoleBackgroundColor(SILVER);
 			if (next->isDirectory) consoleForegroundColor(TEAL);
 			else consoleForegroundColor(BLACK);
+
 			// Blank placeholder
 			printf("\x1B[%u;0H \a                       ", row);
 
@@ -115,6 +116,7 @@ static void fsDirPrint(fsDir* dir, const char* data)
 		// Else if the entry is just a directory or a simple file
 		else if (next->isDirectory) consoleForegroundColor(CYAN);
 		else consoleForegroundColor(WHITE);
+
 		// Display entry's name
 		printf("\x1B[%u;3H%.22s", row++, next->name);
 		consoleResetColor();
@@ -492,7 +494,7 @@ static void fsBackPrint(fsDir* dir, const char* data)
 	consoleClear();
 
 	consoleResetColor();
-	printf("\x1B[0;0HBackup data:");
+	printf("\x1B[0;0H%s data:", data);
 	consoleForegroundColor(TEAL);
 	printf("\x1B[1;0H%.25s", dir->entry.name);
 	consoleResetColor();
@@ -505,6 +507,7 @@ static void fsBackPrint(fsDir* dir, const char* data)
 			consoleBackgroundColor(SILVER);
 			if (next->isDirectory) consoleForegroundColor(TEAL);
 			else consoleForegroundColor(BLACK);
+
 			// Blank placeholder
 			printf("\x1B[%u;0H \a                       ", row);
 
@@ -514,6 +517,7 @@ static void fsBackPrint(fsDir* dir, const char* data)
 		// Else if the entry is just a directory or a simple file
 		else if (next->isDirectory) consoleForegroundColor(CYAN);
 		else consoleForegroundColor(WHITE);
+
 		// Display entry's name
 		printf("\x1B[%u;3H%.22s", row++, next->name);
 		consoleResetColor();
