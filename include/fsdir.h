@@ -27,19 +27,21 @@ typedef struct
 /**
  * @brief Push a value to a stack.
  * @param stack The stack to push.
- * @param value The value to push.
+ * @param offsetId The offset id to push.
+ * @param selectedId The selected id to push.
  */
 Result fsStackPush(fsStack* stack, s16 offsetId, s16 selectedId);
 
 /**
  * @brief Pop a value from a stack.
  * @param stack The stack to pop.
- * @param value The value popped.
+ * @param offsetId The offset id popped.
+ * @param selectedId The selected id popped.
  */
 Result fsStackPop(fsStack* stack, s16* offsetId, s16* selectedId);
 
 /// The directory entry to read from, inherits from fsEntry.
-typedef struct fsDir
+typedef struct
 {
 	fsEntry entry;			///< The mother fsEntry.
 	fsEntry* entrySelected;	///< The current entry selection.
@@ -57,12 +59,12 @@ extern fsDir sdmcDir;
 /**
  * @brief Initializes fsDir.
  */
-Result fsDirInit(void);
+void fsDirInit(void);
 
 /**
  * @brief Exits fsDir.
  */
-Result fsDirExit(void);
+void fsDirExit(void);
 
 /**
  * @brief Prints the save dir in its console.
@@ -133,12 +135,12 @@ extern fsDir backDir;
 /**
  * @brief Initializes fsBack.
  */
-Result fsBackInit(u64 titleid);
+void fsBackInit(u64 titleid);
 
 /**
  * @brief Exits fsBack.
  */
-Result fsBackExit(void);
+void fsBackExit(void);
 
 /**
  * @brief Prints the save dir in its console.

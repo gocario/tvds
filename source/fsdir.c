@@ -46,7 +46,7 @@ static fsDir* currentDir;
 static fsDir* dickDir;
 static u32 entryPrintCount = 20;
 
-Result fsDirInit(void)
+void fsDirInit(void)
 {
 	memset(&saveDir, 0, sizeof(fsDir));
 	memset(&sdmcDir, 0, sizeof(fsDir));
@@ -55,28 +55,22 @@ Result fsDirInit(void)
 	strcpy(sdmcDir.entry.name, "/"); // TODO Replace by "/"
 
 	saveDir.archive = &saveArchive;
-	saveDir.entryOffsetId = 0;
-	fsDirRefreshDir(&saveDir, true);
-
 	sdmcDir.archive = &sdmcArchive;
-	sdmcDir.entryOffsetId = 0;
+
+	fsDirRefreshDir(&saveDir, true);
 	fsDirRefreshDir(&sdmcDir, true);
 
 	currentDir = &sdmcDir;
 	dickDir = &saveDir;
-
-	return 0;
 }
 
-Result fsDirExit(void)
+void fsDirExit(void)
 {
 	fsFreeDir(&saveDir.entry);
 	fsFreeDir(&sdmcDir.entry);
 
 	while (fsStackPop(&saveDir.entryStack, NULL, NULL) == 0);
 	while (fsStackPop(&sdmcDir.entryStack, NULL, NULL) == 0);
-
-	return 0;
 }
 
 /**
@@ -265,11 +259,13 @@ Result fsDirGotoSubDir(void)
 }
 
 /**
- * @brief Displays the overwrite warning and wait for a key.
+ * @brief Displays the overwrite warning and wait for any key.
+ * @param path The path which causes the warning.
  * @return Whether the waited key was pressed.
  */
-static bool fsWaitOverwrite()
+static bool fsWaitOverwrite(const char* path)
 {
+	consoleLog("[path=%s]\n", path);
 	consoleLog("Overwrite detected!\n");
 	consoleLog("Press [Select] to confirm the overwrite.\n");
 
@@ -277,11 +273,13 @@ static bool fsWaitOverwrite()
 }
 
 /**
- * @brief Displays the delete warning and wait for a key.
+ * @brief Displays the delete warning and wait for any key.
+ * @param path The path which causes the warning.
  * @return Whether the waited key was pressed.
  */
-static bool fsWaitDelete()
+static bool fsWaitDelete(const char* path)
 {
+	consoleLog("[path=%s]\n", path);
 	consoleLog("Delete asked!\n");
 	consoleLog("Press [Select] to confirm the delete.\n");
 
@@ -289,11 +287,13 @@ static bool fsWaitDelete()
 }
 
 /**
- * @brief Displays the out of resource warning and wait for a key.
+ * @brief Displays the out of resource warning and wait for any key.
+ * @param path The path which causes the warning.
  * @return Whether the waited key was pressed.
  */
-static bool fsWaitOutOfResource()
+static bool fsWaitOutOfResource(const char* path)
 {
+	consoleLog("[path=%s]\n", path);
 	consoleLog("The file was too big for the archive!\n");
 	consoleLog("Press any key to continue.\n");
 
@@ -323,14 +323,13 @@ static Result fsDirCopy(fsEntry* srcEntry, fsDir* srcDir, fsDir* dstDir, bool ov
 		memset(srcPath.name, 0, FS_MAX_PATH_LENGTH);
 		strcpy(srcPath.name, dstDir->entry.name);
 		if (!srcPath.isRootDirectory) strcat(srcPath.name, srcEntry->name);
-		consoleLog("\a%s\n", srcPath.name);
 
 		if (fsDirExists(srcPath.name, dstDir->archive) && !overwrite)
 		{
-			if (!fsWaitOverwrite()) return FS_USER_INTERRUPT;
+			if (!fsWaitOverwrite(srcPath.name)) return FS_USER_INTERRUPT;
 			consoleLog("Overwrite validated!\n");
 		}
-		else
+		else if (!srcPath.isRootDirectory)
 		{
 			FS_CreateDirectory(srcPath.name, dstDir->archive);
 		}
@@ -338,7 +337,6 @@ static Result fsDirCopy(fsEntry* srcEntry, fsDir* srcDir, fsDir* dstDir, bool ov
 		memset(srcPath.name, 0, FS_MAX_PATH_LENGTH);
 		if (!srcPath.isRootDirectory) strcpy(srcPath.name, srcDir->entry.name);
 		strcat(srcPath.name, srcEntry->name);
-		consoleLog("\a%s\n", srcPath.name);
 
 		fsScanDir(&srcPath, srcDir->archive, false);
 		fsEntry* next = srcPath.firstEntry;
@@ -354,7 +352,6 @@ static Result fsDirCopy(fsEntry* srcEntry, fsDir* srcDir, fsDir* dstDir, bool ov
 			strcat(srcPath.name, srcEntry->name);
 			strcat(srcPath.name, "/");
 			strcat(srcPath.name, next->name);
-			consoleLog("\a%s\n", srcPath.name);
 
 			fsDirCopy(&srcPath, srcDir, dstDir, overwrite);
 
@@ -373,18 +370,14 @@ static Result fsDirCopy(fsEntry* srcEntry, fsDir* srcDir, fsDir* dstDir, bool ov
 		memset(srcPath, 0, FS_MAX_PATH_LENGTH);
 		strcpy(srcPath, srcDir->entry.name);
 		strcat(srcPath, srcEntry->name);
-		// strncat(srcPath, srcEntry->name, FS_MAX_PATH_LENGTH - strlen(srcPath));
-		consoleLog("\a%s\n", srcPath);
 
 		memset(dstPath, 0, FS_MAX_PATH_LENGTH);
 		strcpy(dstPath, dstDir->entry.name);
 		strcat(dstPath, srcEntry->name);
-		// strncat(dstPath, srcEntry->name, FS_MAX_PATH_LENGTH - strlen(dstPath));
-		consoleLog("\a%s\n", dstPath);
 
 		if (fsFileExists(dstPath, dstDir->archive) && !overwrite)
 		{
-			if (!fsWaitOverwrite()) return FS_USER_INTERRUPT;
+			if (!fsWaitOverwrite(dstPath)) return FS_USER_INTERRUPT;
 			consoleLog("Overwrite validated!\n");
 		}
 
@@ -392,7 +385,7 @@ static Result fsDirCopy(fsEntry* srcEntry, fsDir* srcDir, fsDir* dstDir, bool ov
 
 		if (ret == FS_OUT_OF_RESOURCE || ret == FS_OUT_OF_RESOURCE_2)
 		{
-			fsWaitOutOfResource();
+			fsWaitOutOfResource(dstPath);
 
 			FS_DeleteFile(dstPath, dstDir->archive);
 		}
@@ -426,27 +419,29 @@ Result fsDirCopyCurrentFolder(bool overwrite)
 
 Result fsDirDeleteCurrentEntry(void)
 {
-	if (!fsWaitDelete()) return FS_USER_INTERRUPT;
-	consoleLog("Delete validated!\n");
-
 	Result ret = -3;
 
 	char path[FS_MAX_PATH_LENGTH];
 	memset(path, 0, FS_MAX_PATH_LENGTH);
 	strcpy(path, currentDir->entry.name);
 	strcat(path, currentDir->entrySelected->name);
-	consoleLog("\a%s\n", path);
 
 	if (currentDir->entrySelected->isDirectory)
 	{
 		if (currentDir->entrySelected->isRealDirectory)
 		{
+			if (!fsWaitDelete(path)) return FS_USER_INTERRUPT;
+			consoleLog("Delete validated!\n");
+
 			ret = FS_DeleteDirectoryRecursively(path, currentDir->archive);
 			fsDirRefreshDir(currentDir, true);
 		}
 	}
 	else
 	{
+		if (!fsWaitDelete(path)) return FS_USER_INTERRUPT;
+		consoleLog("Delete validated!\n");
+
 		ret = FS_DeleteFile(path, currentDir->archive);
 		fsDirRefreshDir(currentDir, true);
 	}
@@ -456,28 +451,25 @@ Result fsDirDeleteCurrentEntry(void)
 
 fsDir backDir;
 
-Result fsBackInit(u64 titleid)
+void fsBackInit(u64 titleid)
 {
 	memset(&backDir, 0, sizeof(fsDir));
-
+	
 	sprintf(backDir.entry.name, "/backup/%016llx/", titleid);
-	FS_CreateDirectory("/backup/", &sdmcArchive);
-	FS_CreateDirectory(backDir.entry.name, &sdmcArchive);
 
 	backDir.archive = &sdmcArchive;
-	backDir.entryOffsetId = 0;
-	fsDirRefreshDir(&backDir, false);
 
-	return 0;
+	FS_CreateDirectory("/backup/", backDir.archive);
+	FS_CreateDirectory(backDir.entry.name, backDir.archive);
+
+	fsDirRefreshDir(&backDir, false);
 }
 
-Result fsBackExit(void)
+void fsBackExit(void)
 {
 	fsFreeDir(&backDir.entry);
 
 	while (fsStackPop(&backDir.entryStack, NULL, NULL) == 0);
-
-	return 0;
 }
 
 /**
@@ -497,11 +489,6 @@ static void fsBackPrint(fsDir* dir, const char* data)
 		next = next->nextEntry;
 	}
 
-	consoleSelectNew(&saveConsole);
-	consoleClear();
-	consoleSelectLast();
-
-	consoleSelectNew(&sdmcConsole);
 	consoleClear();
 
 	consoleResetColor();
@@ -534,8 +521,6 @@ static void fsBackPrint(fsDir* dir, const char* data)
 		// Iterate though linked list
 		next = next->nextEntry;
 	}
-
-	consoleSelectLast();
 }
 
 void fsBackPrintSave(void)
@@ -697,16 +682,15 @@ Result fsBackImport(void)
 
 Result fsBackDelete(void)
 {
-	if (!fsWaitDelete()) return FS_USER_INTERRUPT;
-	consoleLog("Delete validated!\n");
-
 	Result ret = -3;
 
 	char path[FS_MAX_PATH_LENGTH];
 	memset(path, 0, FS_MAX_PATH_LENGTH);
 	strcpy(path, backDir.entry.name);
 	strcat(path, backDir.entrySelected->name);
-	consoleLog("\a%s\n", path);
+
+	if (!fsWaitDelete(path)) return FS_USER_INTERRUPT;
+	consoleLog("Delete validated!\n");
 
 	ret = FS_DeleteDirectoryRecursively(path, backDir.archive);
 	fsDirRefreshDir(&backDir, false);
