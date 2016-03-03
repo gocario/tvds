@@ -192,8 +192,7 @@ void fsDirMove(s16 count)
 	if (currentDir->entrySelectedId < 0)
 	{
 		currentDir->entrySelectedId = currentDir->entry.entryCount-1;
-		currentDir->entryOffsetId = (currentDir->entry.entryCount > entryPrintCount ?
-			currentDir->entry.entryCount - entryPrintCount : 0);
+		currentDir->entryOffsetId = (currentDir->entry.entryCount > entryPrintCount ? currentDir->entry.entryCount - entryPrintCount : 0);
 	}
 
 	if (currentDir->entrySelectedId > currentDir->entry.entryCount-1)
@@ -204,15 +203,12 @@ void fsDirMove(s16 count)
 
 	if (currentDir->entryOffsetId >= currentDir->entrySelectedId)
 	{
-		currentDir->entryOffsetId = (currentDir->entrySelectedId > 0 ?
-			currentDir->entrySelectedId-1 : currentDir->entrySelectedId);
+		currentDir->entryOffsetId = currentDir->entrySelectedId + (currentDir->entrySelectedId > 0 ? -1 : 0);
 	}
 
-	else if (currentDir->entrySelectedId > entryPrintCount-2 && count > 0 &&
-		currentDir->entryOffsetId + entryPrintCount-2 < currentDir->entrySelectedId)
+	else if (currentDir->entrySelectedId > entryPrintCount-2 && count > 0 && currentDir->entryOffsetId + entryPrintCount-2 < currentDir->entrySelectedId)
 	{
-		currentDir->entryOffsetId = (currentDir->entrySelectedId < currentDir->entry.entryCount-1 ?
-			currentDir->entrySelectedId+1 : currentDir->entrySelectedId) - entryPrintCount+1;
+		currentDir->entryOffsetId = currentDir->entrySelectedId - entryPrintCount + (currentDir->entrySelectedId < currentDir->entry.entryCount-1 ? 2 : 1);
 	}
 }
 
