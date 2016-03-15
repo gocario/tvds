@@ -10,43 +10,96 @@
 #include "console.h"
 
 #define HELD_TICK (16000000)
+#define NO_HELD_TICK
 
 typedef enum {
+	STATE_START,		///< Start
 	STATE_EOF,			///< End of file
 	STATE_ERROR,		///< Error
 	STATE_BROWSE,		///< Browse
+	STATE_BACKUP,		///< Backup
 } State;
 
 static State state;
+static u64 titleid;
 
-void drawMenu()
+void drawHelp(void)
 {
 	consoleSelect(&logConsole);
 	consoleClear();
 
 	printf(" Welcome in tvds, a tdvs clone.\n");
 	printf("\n");
-	printf("> [Up/Down] Select file/folder\n");
-	printf("> [L/R] Swap between Save/Sdmc folder\n");
-	printf("> [A] Navigate inside a folder\n");
-	printf("> [B] Return to the parent folder\n");
-	printf("> [X] Delete the current file/folder\n");
-	printf("> [Y] Copy the current file/folder\n");
+
+	switch (state)
+	{
+		case STATE_BROWSE:
+		{
+			printf("> [Up/Down] Select file/folder\n");
+			printf("> [L/R] Swap between Save/Sdmc folder\n");
+			printf("> [A] Navigate inside a folder\n");
+			printf("> [B] Return to the parent folder\n");
+			printf("> [X] Delete the current file/folder\n");
+			printf("> [Y] Copy the current file/folder\n");
+			break;
+		}
+		case STATE_BACKUP:
+		{
+			printf("> [Up/Down] Select backup\n");
+			printf("> [A] Inject the selected backup back\n");
+			printf("> [X] Delete the selected backup\n");
+			printf("> [Y] Create a new backup\n");
+			break;
+		}
+		default: break;
+	}
+
 	printf("> [Select] Print these instructions\n");
 	printf("> [Start] Exit tvds\n");
 	printf("\n");
 
 	consoleSelectDefault();
+
+	consoleSelect(&titleConsole);
+	consoleClear();
+
+	printf("Title id: 0x%016llx", titleid);
+
+	consoleSelectDefault();
 }
 
-int main(int argc, char* argv[])
+void drawBrowse(void)
+{
+	fsDirPrintSave();
+	fsDirPrintSdmc();
+	drawHelp();
+}
+
+void drawBackup(void)
+{
+	fsBackPrintSave();
+	fsBackPrintBackup();
+	drawHelp();
+}
+
+void switchState(State* state)
+{
+	switch (*state)
+	{
+		case STATE_START:
+		case STATE_BACKUP: *state = STATE_BROWSE; drawBrowse(); break;
+		case STATE_BROWSE: *state = STATE_BACKUP; drawBackup(); break;
+		default: break;
+	}
+}
+
+int main(void)
 {
 	gfxInitDefault();
 	consoleInitDefault();
 
 	Result ret;
-	u64 titleId;
-	state = STATE_BROWSE;
+	state = STATE_START;
 
 	ret = FS_Init();
 	if (R_FAILED(ret))
@@ -65,7 +118,7 @@ int main(int argc, char* argv[])
 		// state = BACKUP_ERROR;
 	}
 
-	ret = saveGetTitleId(&titleId);
+	ret = saveGetTitleId(&titleid);
 	if (R_FAILED(ret))
 	{
 		printf("\nCouldn't get the title id of the game!\n");
@@ -74,10 +127,10 @@ int main(int argc, char* argv[])
 	}
 
 	fsDirInit();
-	fsDirPrintSave();
-	fsDirPrintSdmc();
+	fsBackInit(titleid);
+	switchState(&state);
 
-	drawMenu();
+	drawHelp();
 
 	u64 heldUp = 0;
 	u64 heldDown = 0;
@@ -117,41 +170,45 @@ int main(int argc, char* argv[])
 
 				if (kDown & KEY_UP)
 				{
-					fsDirMove(kHeld & KEY_R ? -5 : -1);
+					fsDirMove(-1);
 					fsDirPrintCurrent();
 					heldUp = svcGetSystemTick() + HELD_TICK * 2;
 				}
-				// else if (kHeld & KEY_UP)
-				// {
-				// 	if (heldUp + HELD_TICK < svcGetSystemTick())
-				// 	{
-				// 		fsDirMove(kHeld & KEY_R ? -5 : -1);
-				// 		fsDirPrintCurrent();
-				// 		heldUp = svcGetSystemTick();
-				// 	}
-				// }
+#ifndef NO_HELD_TICK
+				else if (kHeld & KEY_UP)
+				{
+					if (heldUp + HELD_TICK < svcGetSystemTick())
+					{
+						fsDirMove(-1);
+						fsDirPrintCurrent();
+						heldUp = svcGetSystemTick();
+					}
+				}
+#endif
 
 				if (kDown & KEY_DOWN)
 				{
-					fsDirMove(kHeld & KEY_R ? +5 : +1);
+					fsDirMove(+1);
 					fsDirPrintCurrent();
 					heldDown = svcGetSystemTick() + HELD_TICK * 2;
 				}
-				// else if (kHeld & KEY_DOWN)
-				// {
-				// 	if (heldDown + HELD_TICK < svcGetSystemTick())
-				// 	{
-				// 		fsDirMove(kHeld & KEY_R ? +5 : +1);
-				// 		fsDirPrintCurrent();
-				// 		heldDown = svcGetSystemTick();
-				// 	}
-				// }
+#ifndef NO_HELD_TICK
+				else if (kHeld & KEY_DOWN)
+				{
+					if (heldDown + HELD_TICK < svcGetSystemTick())
+					{
+						fsDirMove(+1);
+						fsDirPrintCurrent();
+						heldDown = svcGetSystemTick();
+					}
+				}
+#endif
 
 				if (kDown & KEY_A)
 				{
 					ret = fsDirGotoSubDir();
-					consoleLog("   > fsfDirGotoSubDir: %lx\n", ret);
-					fsDirPrintCurrent();						
+					consoleLog("   > fsDirGotoSubDir: %lx\n", ret);
+					fsDirPrintCurrent();
 				}
 
 				if (kDown & KEY_B)
@@ -175,10 +232,66 @@ int main(int argc, char* argv[])
 					fsDirPrintDick();
 				}
 
-				if (kDown & KEY_SELECT)
+				break;
+			}
+			case STATE_BACKUP:
+			{
+				if (kDown & KEY_A)
 				{
-					drawMenu();
+					ret = fsBackImport();
+					consoleLog("  > fsBackImport: %lx\n", ret);
+					fsBackPrintSave();
 				}
+
+				if (kDown & KEY_X)
+				{
+					ret = fsBackDelete();
+					consoleLog("  > fsBackDelete: %lx\n", ret);
+					fsBackPrintBackup();
+				}
+
+				if (kDown & KEY_Y)
+				{
+					ret = fsBackExport();
+					consoleLog("  > fsBackExport: %lx\n", ret);
+					fsBackPrintBackup();
+				}
+
+				if (kDown & KEY_UP)
+				{
+					fsBackMove(-1);
+					fsBackPrintBackup();
+					heldUp = svcGetSystemTick() + HELD_TICK * 2;
+				}
+#ifndef NO_HELD_TICK
+				else if (kHeld & KEY_UP)
+				{
+					if (heldUp + HELD_TICK < svcGetSystemTick())
+					{
+						fsBackMove(-1);
+						fsBackPrintBackup();
+						heldUp = svcGetSystemTick();
+					}
+				}
+#endif
+
+				if (kDown & KEY_DOWN)
+				{
+					fsBackMove(+1);
+					fsBackPrintBackup();
+					heldDown = svcGetSystemTick() + HELD_TICK * 2;
+				}
+#ifndef NO_HELD_TICK
+				else if (kHeld & KEY_DOWN)
+				{
+					if (heldDown + HELD_TICK < svcGetSystemTick())
+					{
+						fsBackMove(+1);
+						fsBackPrintBackup();
+						heldDown = svcGetSystemTick();
+					}
+				}
+#endif
 
 				break;
 			}
@@ -186,11 +299,30 @@ int main(int argc, char* argv[])
 			{
 				consoleLog("\nAn error has occured...\n");
 				consoleLog("Please check previous logs!\n");
-				consoleLog("\nPress any key to exit.\n");
+				consoleLog("\nPress start to exit.\n");
 				state = STATE_EOF;
 				break;
 			}
 			default: break;
+		}
+
+		{
+			if (kDown & KEY_L)
+			{
+				// TODO: Prev
+				switchState(&state); // TODO: Uncomment
+			}
+
+			if (kDown & KEY_R)
+			{
+				// TODO: Next
+				switchState(&state); // TODO: Uncomment
+			}
+
+			if (kDown & KEY_SELECT)
+			{
+				drawHelp();
+			}
 		}
 
 		if (kDown & KEY_START)
@@ -201,6 +333,7 @@ int main(int argc, char* argv[])
 	}
 
 	fsDirExit();
+	fsBackExit();
 	FS_Exit();
 	{
 		hidScanInput();
@@ -209,7 +342,7 @@ int main(int argc, char* argv[])
 			u8 out = 0;
 			FS_MediaType mediaType = 3;
 			FSUSER_GetMediaType(&mediaType);
-			Result ret = saveRemoveSecureValue(titleId, mediaType, &out);
+			Result ret = saveRemoveSecureValue(titleid, mediaType, &out);
 			if (R_FAILED(ret))
 			{
 				printf("\nSecure value not removed.\n");
