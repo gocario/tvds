@@ -1,6 +1,7 @@
 #include "console.h"
 
 #include <stdio.h>
+#include <stdarg.h>
 
 PrintConsole statusConsole;
 PrintConsole saveConsole;
@@ -50,7 +51,7 @@ void consoleSelectLast(void)
 	consoleSelect(lastConsole);
 }
 
-void consoleLog(char* format, ...)
+void consoleLog(const char* format, ...)
 {
     va_list args;
     va_start(args, format);
@@ -65,7 +66,7 @@ void consoleResetColor(void)
 	printf("\x1B[0m");
 }
 
-void consoleForegroundColor(consoleColor color)
+void consoleForegroundColor(ConsoleColor color)
 {
 	// If bright color
 	if (color > 7)
@@ -79,7 +80,7 @@ void consoleForegroundColor(consoleColor color)
 	}
 }
 
-void consoleBackgroundColor(consoleColor color)
+void consoleBackgroundColor(ConsoleColor color)
 {
 	// If bright color
 	if (color > 7)

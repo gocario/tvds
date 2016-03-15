@@ -6,13 +6,11 @@
 
 #include <3ds/console.h>
 
-#include <stdarg.h>
-
 typedef enum 
 {
 	BLACK, MAROON, GREEN, OLIVE, NAVY, PURPLE, TEAL, SILVER,	///< Normal (0-7)
 	GRAY, RED, LIME, YELLOW, BLUE, FUCHSIA, CYAN, WHITE,		///< Bright (8-15)
-} consoleColor;
+} ConsoleColor;
 
 extern PrintConsole statusConsole;	///< Header
 extern PrintConsole saveConsole;	///< Save data
@@ -27,7 +25,7 @@ void consoleInitDefault(void);
 
 /**
  * @brief Declares the use of a new console.
- * @param console The new console to use.
+ * @param[in] console The new console to use.
  */
 void consoleSelectNew(PrintConsole* console);
 
@@ -45,9 +43,9 @@ void consoleSelectLast(void);
 
 /**
  * @brief Prints arguments to the log console, selects back the previous console.
- * @param format The text to print.
+ * @param[in] format The text to print.
  */
-void consoleLog(char* format, ...);
+void consoleLog(const char* format, ...);
 
 /**
  * @brief Reset the console colors.
@@ -58,10 +56,10 @@ void consoleResetColor(void);
  * @brief Changes the console foreground color.
  * @param color The color to use.
  */
-void consoleForegroundColor(consoleColor color);
+void consoleForegroundColor(ConsoleColor color);
 
 /**
  * @brief Changes the console background color.
  * @param color The color to use.
  */
-void consoleBackgroundColor(consoleColor color);
+void consoleBackgroundColor(ConsoleColor color);

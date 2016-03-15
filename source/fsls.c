@@ -12,7 +12,7 @@
 // #define r(format, args...) consoleLog(format, ##args)
 #define r(format, args...)
 
-bool fsFileExists(char* path, FS_Archive* archive)
+bool fsFileExists(const char* path, const FS_Archive* archive)
 {
 	if (!path || !archive) return -1;
 
@@ -35,7 +35,7 @@ bool fsFileExists(char* path, FS_Archive* archive)
 	return R_SUCCEEDED(ret);
 }
 
-bool fsDirExists(char* path, FS_Archive* archive)
+bool fsDirExists(const char* path, const FS_Archive* archive)
 {
 	if (!path || !archive) return -1;
 
@@ -58,7 +58,7 @@ bool fsDirExists(char* path, FS_Archive* archive)
 	return R_SUCCEEDED(ret);
 }
 
-Result fsCopyFile(char* srcPath, FS_Archive* srcArchive, char* dstPath, FS_Archive* dstArchive, u32 attributes)
+Result fsCopyFile(const char* srcPath, const FS_Archive* srcArchive, const char* dstPath, const FS_Archive* dstArchive, u32 attributes)
 {
 	if (!srcPath || !srcArchive || !dstPath || !dstArchive) return -1;
 
@@ -110,7 +110,7 @@ Result fsCopyFile(char* srcPath, FS_Archive* srcArchive, char* dstPath, FS_Archi
 	return ret;
 }
 
-Result fsScanDir(fsEntry* dir, FS_Archive* archive, bool rec)
+Result fsScanDir(fsEntry* dir, const FS_Archive* archive, bool rec)
 {
 	if (!dir || !archive) return -1;
 
@@ -173,6 +173,10 @@ Result fsScanDir(fsEntry* dir, FS_Archive* archive, bool rec)
 			// Set the next entries
 			if (dir->firstEntry)
 			{
+				// TODO: Fix that! v
+				//       If an entry is a file and there is one folder,
+				//           it is placed before that folder
+
 				if (alphasort)
 				{
 					fsEntry* tmpPrevEntry = dir->firstEntry;
@@ -354,7 +358,7 @@ Result fsGotoParentDir(fsEntry* dir)
 	return 0;
 }
 
-Result fsGotoSubDir(fsEntry* dir, char* subDir)
+Result fsGotoSubDir(fsEntry* dir, const char* subDir)
 {
 	if (!dir || !subDir) return -1;
 

@@ -26,7 +26,7 @@ typedef struct
 
 /**
  * @brief Push a value to a stack.
- * @param stack The stack to push.
+ * @param[in/out] stack The stack to push.
  * @param offsetId The offset id to push.
  * @param selectedId The selected id to push.
  */
@@ -34,9 +34,9 @@ Result fsStackPush(fsStack* stack, s16 offsetId, s16 selectedId);
 
 /**
  * @brief Pop a value from a stack.
- * @param stack The stack to pop.
- * @param offsetId The offset id popped.
- * @param selectedId The selected id popped.
+ * @param[in/out] stack The stack to pop.
+ * @param[out] offsetId The offset id popped.
+ * @param[ou] selectedId The selected id popped.
  */
 Result fsStackPop(fsStack* stack, s16* offsetId, s16* selectedId);
 
@@ -88,13 +88,13 @@ void fsDirPrintDick(void);
 
 /**
  * @brief Frees and scans a directory
- * @param dir The dir to refresh
+ * @param[in/out] dir The dir to refresh
  */
 void fsDirRefreshDir(fsDir* dir, bool addParentDir);
 
 /**
  * @brief Switchs the current dir.
- * @param dir The dir to switch to.
+ * @param[in/out] dir The dir to switch to.
  */
 void fsDirSwitch(fsDir* dir);
 

@@ -28,59 +28,59 @@ typedef struct fsEntry
 
 /**
  * @brief Checks if a file exists.
- * @param path The path of the file.
- * @param archive The archive of the file.
+ * @param[in] path The path of the file.
+ * @param[in] archive The archive of the file.
  * @return Whether the file exists.
  */
-bool fsFileExists(char* path, FS_Archive* archive);
+bool fsFileExists(const char* path, const FS_Archive* archive);
 
 /**
  * @brief Checks if a directory exists.
- * @param path The path of the directory.
- * @param archive The archive of the directory.
+ * @param[in] path The path of the directory.
+ * @param[in] archive The archive of the directory.
  * @return Whether the directory exists.
  */
-bool fsDirExists(char* path, FS_Archive* archive);
+bool fsDirExists(const char* path, const FS_Archive* archive);
 
 /**
  * @brief Copies a file from an archive to another archive.
- * @param srcPath The path of the source file/directory.
- * @param srcArchive The archive of the source file/directory.
- * @param dstPath The path of the destination file/directory.
- * @param dstArchive The archive of the destination file/directory.
+ * @param[in] srcPath The path of the source file/directory.
+ * @param[in] srcArchive The archive of the source file/directory.
+ * @param[in] dstPath The path of the destination file/directory.
+ * @param[in] dstArchive The archive of the destination file/directory.
  * @param attributes The attributes of the file/directory.
  */
-Result fsCopyFile(char* srcPath, FS_Archive* srcArchive, char* dstPath, FS_Archive* dstArchive, u32 attributes);
+Result fsCopyFile(const char* srcPath, const FS_Archive* srcArchive, const char* dstPath, const FS_Archive* dstArchive, u32 attributes);
 
 /**
  * @brief Scans a directory based on an archive.
- * @param dir The directory to scan.
- * @param archive The archive to scan.
+ * @param[in] dir The directory to scan.
+ * @param[in] archive The archive to scan.
  * @param rec Whether the scan is recursive.
  */
-Result fsScanDir(fsEntry* dir, FS_Archive* archive, bool rec);
+Result fsScanDir(fsEntry* dir, const FS_Archive* archive, bool rec);
 
 /**
  * @brief Frees the entries of a directory.
- * @param dir The directory to free.
+ * @param[in] dir The directory to free.
  */
 Result fsFreeDir(fsEntry* dir);
 
 /**
  * @brief Adds a virtual entry, which is the parentdir of a directory.
- * @param dir The directory.
+ * @param[in] dir The directory.
  */
 Result fsAddParentDir(fsEntry* dir);
 
 /**
  * @brief Goes to the parentdir of a directory.
- * @param dir The directory.
+ * @param[in] dir The directory.
  */
 Result fsGotoParentDir(fsEntry* dir);
 
 /**
  * @brief Goes to a subdir of a directory.
- * @param dir The directory.
- * @param subDir The subdir path.
+ * @param[in] dir The directory.
+ * @param[in] subDir The subdir path.
  */
-Result fsGotoSubDir(fsEntry* dir, char* subDir);
+Result fsGotoSubDir(fsEntry* dir, const char* subDir);

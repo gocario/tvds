@@ -26,7 +26,7 @@ FS_Archive sdmcArchive;
 FS_Archive saveArchive;
 
 #ifdef FS_DEBUG_FIX_ARCHIVE
-bool FSDEBUG_FixArchive(FS_Archive** archive)
+bool FSDEBUG_FixArchive(const FS_Archive** archive)
 {
 	debug_print("FSDEBUG_FixArchive:\n");
 
@@ -46,7 +46,7 @@ bool FSDEBUG_FixArchive(FS_Archive** archive)
 }
 #endif
 
-Result FS_ReadFile(char* path, void* dst, FS_Archive* archive, u64 maxSize, u32* bytesRead)
+Result FS_ReadFile(const char* path, void* dst, u64 maxSize, const FS_Archive* archive, u32* bytesRead)
 {
 	if (!path || !dst || !archive || !bytesRead) return -1;
 
@@ -81,7 +81,7 @@ Result FS_ReadFile(char* path, void* dst, FS_Archive* archive, u64 maxSize, u32*
 	return ret;
 }
 
-Result FS_WriteFile(char* path, void* src, u64 size, FS_Archive* archive, u32* bytesWritten)
+Result FS_WriteFile(const char* path, const void* src, u64 size, const FS_Archive* archive, u32* bytesWritten)
 {
 	if (!path || !src || !archive || !bytesWritten) return -1;
 
@@ -111,7 +111,7 @@ Result FS_WriteFile(char* path, void* src, u64 size, FS_Archive* archive, u32* b
 	return ret;
 }
 
-Result FS_DeleteFile(char* path, FS_Archive* archive)
+Result FS_DeleteFile(const char* path, const FS_Archive* archive)
 {
 	if (!path || !archive) return -1;
 
@@ -129,7 +129,7 @@ Result FS_DeleteFile(char* path, FS_Archive* archive)
 	return ret;
 }
 
-Result FS_CreateDirectory(char* path, FS_Archive* archive)
+Result FS_CreateDirectory(const char* path, const FS_Archive* archive)
 {
 	if (!path || !archive) return -1;
 
@@ -147,7 +147,7 @@ Result FS_CreateDirectory(char* path, FS_Archive* archive)
 	return ret;
 }
 
-Result FS_DeleteDirectory(char* path, FS_Archive* archive)
+Result FS_DeleteDirectory(const char* path, const FS_Archive* archive)
 {
 	if (!path || !archive) return -1;
 
@@ -165,7 +165,7 @@ Result FS_DeleteDirectory(char* path, FS_Archive* archive)
 	return ret;
 }
 
-Result FS_DeleteDirectoryRecursively(char* path, FS_Archive* archive)
+Result FS_DeleteDirectoryRecursively(const char* path, const FS_Archive* archive)
 {
 	if (!path || !archive) return -1;
 
@@ -183,7 +183,7 @@ Result FS_DeleteDirectoryRecursively(char* path, FS_Archive* archive)
 	return ret;
 }
 
-Result FS_CommitArchive(FS_Archive* archive)
+Result FS_CommitArchive(const FS_Archive* archive)
 {
 	if (!archive) return -1;
 
@@ -196,6 +196,12 @@ Result FS_CommitArchive(FS_Archive* archive)
 
 	return ret;
 }
+
+#ifdef __cia
+
+// TODO: FS for cia build
+
+#else
 
 Result FS_Init(void)
 {
@@ -270,3 +276,5 @@ Result FS_Exit(void)
 
 	return ret;
 }
+
+#endif // __cia
