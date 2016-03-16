@@ -173,10 +173,6 @@ Result fsScanDir(fsEntry* dir, const FS_Archive* archive, bool rec)
 			// Set the next entries
 			if (dir->firstEntry)
 			{
-				// TODO: Fix that! v
-				//       If an entry is a file and there is one folder,
-				//           it is placed before that folder
-
 				if (alphasort)
 				{
 					fsEntry* tmpPrevEntry = dir->firstEntry;
@@ -184,17 +180,20 @@ Result fsScanDir(fsEntry* dir, const FS_Archive* archive, bool rec)
 
 					while (tmpNextEntry && tmpPrevEntry)
 					{
+						// If it's a file and a directory
 						if (entry->isDirectory != tmpNextEntry->isDirectory)
 						{
 							if (entry->isDirectory)
 							{
-								if (tmpPrevEntry == dir->firstEntry)
+								if (tmpNextEntry == dir->firstEntry)
 								{
+									// Place first (entry-first)
 									entry->nextEntry = dir->firstEntry;
 									dir->firstEntry = entry;
 								}
 								else
 								{
+									// Place before (prev-entry-next)
 									entry->nextEntry = tmpPrevEntry->nextEntry;
 									tmpPrevEntry->nextEntry = entry;
 								}
@@ -203,19 +202,23 @@ Result fsScanDir(fsEntry* dir, const FS_Archive* archive, bool rec)
 							}
 							else
 							{
+								// Next entry
 								tmpPrevEntry = tmpNextEntry;
-								tmpNextEntry = tmpPrevEntry->nextEntry;
+								tmpNextEntry = tmpNextEntry->nextEntry;
 							}
 						}
+						// Else if it is a bigger alpha string.
 						else if (strcmp(entry->name, tmpNextEntry->name) < 0)
 						{
-							if (tmpPrevEntry == dir->firstEntry)
+							if (tmpNextEntry == dir->firstEntry)
 							{
+								// Place first (entry-first)
 								entry->nextEntry = dir->firstEntry;
 								dir->firstEntry = entry;
 							}
 							else
 							{
+								// Place before (prev-entry-next)
 								entry->nextEntry = tmpPrevEntry->nextEntry;
 								tmpPrevEntry->nextEntry = entry;
 							}
@@ -224,14 +227,16 @@ Result fsScanDir(fsEntry* dir, const FS_Archive* archive, bool rec)
 						}
 						else
 						{
+							// Next entry
 							tmpPrevEntry = tmpNextEntry;
-							tmpNextEntry = tmpPrevEntry->nextEntry;
+							tmpNextEntry = tmpNextEntry->nextEntry;
 						}
 					}
 
 					// Append the entry to the end if eof
 					if (tmpPrevEntry)
 					{
+						// Place last (last-entry)
 						tmpPrevEntry->nextEntry = entry;
 						entry->nextEntry = tmpNextEntry;
 					}
@@ -246,6 +251,7 @@ Result fsScanDir(fsEntry* dir, const FS_Archive* archive, bool rec)
 			// Set the first entry
 			else
 			{
+				// Place first and last
 				dir->firstEntry = entry;
 				lastEntry = entry;
 			}

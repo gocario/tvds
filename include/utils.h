@@ -3,6 +3,8 @@
 #include <3ds/types.h>
 
 inline void unicodeToChar(char* dst, u16* src, s16 max)
+/// Do NOT use that!
+inline void unicodeToChar(char* dst, const u16* src, s16 max)
 {
 	if (!src || !dst) return;
 	u16 ii;
@@ -12,6 +14,8 @@ inline void unicodeToChar(char* dst, u16* src, s16 max)
 }
 
 inline void charToUnicode(u16* dst, char* src, s16 max)
+/// Do NOT use that!
+inline void charToUnicode(u16* dst, const char* src, s16 max)
 {
 	if (!src || !dst) return;
 	u16 ii;
