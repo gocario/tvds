@@ -15,15 +15,16 @@
 /// An entry of a file or a directory.
 typedef struct fsEntry
 {
-	char name[FS_MAX_PATH_LENGTH];	///< The name as char.
-	u32 attributes;					///< The attributes. (Is FS_DIRECTORY?)
-	bool isDirectory : 1;			///< If FS_DIRECTORY.
-	bool isRealDirectory : 1;		///< If FS_REAL_DIRECTORY.
-	bool isRootDirectory : 1;		///< If FS_ROOT_DIRECTORY.
+	u16 name16[FS_MAX_PATH_LENGTH];	///< The name as UTF-16
+	char name[FS_MAX_PATH_LENGTH];	///< The name as char
+	u32 attributes;					///< The attributes (Is FS_DIRECTORY?)
+	bool isDirectory : 1;			///< If FS_DIRECTORY
+	bool isRealDirectory : 1;		///< If FS_REAL_DIRECTORY
+	bool isRootDirectory : 1;		///< If FS_ROOT_DIRECTORY
 	unsigned : 5;
-	struct fsEntry* nextEntry;		///< The next entry (linked list).
-	struct fsEntry* firstEntry;		///< The first entry (child). FS_DIRECTORY
-	u16 entryCount;					///< The count of the entries (childs). FS_DIRECTORY
+	struct fsEntry* nextEntry;		///< The next entry (linked list)
+	struct fsEntry* firstEntry;		///< The first entry (child) FS_DIRECTORY
+	u16 entryCount;					///< The count of the entries (childs) FS_DIRECTORY
 } fsEntry;
 
 /**
@@ -33,6 +34,7 @@ typedef struct fsEntry
  * @return Whether the file exists.
  */
 bool fsFileExists(const char* path, const FS_Archive* archive);
+// bool fsFileExists(const u16* path, const FS_Archive* archive);
 
 /**
  * @brief Checks if a directory exists.
@@ -41,6 +43,7 @@ bool fsFileExists(const char* path, const FS_Archive* archive);
  * @return Whether the directory exists.
  */
 bool fsDirExists(const char* path, const FS_Archive* archive);
+// bool fsDirExists(const u16* path, const FS_Archive* archive);
 
 /**
  * @brief Copies a file from an archive to another archive.
@@ -51,6 +54,7 @@ bool fsDirExists(const char* path, const FS_Archive* archive);
  * @param attributes The attributes of the file/directory.
  */
 Result fsCopyFile(const char* srcPath, const FS_Archive* srcArchive, const char* dstPath, const FS_Archive* dstArchive, u32 attributes);
+// Result fsCopyFile(const u16* srcPath, const FS_Archive* srcArchive, const u16* dstPath, const FS_Archive* dstArchive, u32 attributes);
 
 /**
  * @brief Scans a directory based on an archive.
@@ -84,3 +88,4 @@ Result fsGotoParentDir(fsEntry* dir);
  * @param[in] subDir The subdir path.
  */
 Result fsGotoSubDir(fsEntry* dir, const char* subDir);
+// Result fsGotoSubDir(fsEntry* dir, const u16* subDir);

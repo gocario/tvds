@@ -13,6 +13,7 @@
 #define r(format, args...)
 
 bool fsFileExists(const char* path, const FS_Archive* archive)
+// bool fsFileExists(const u16* path, const FS_Archive* archive)
 {
 	if (!path || !archive) return -1;
 
@@ -24,6 +25,10 @@ bool fsFileExists(const char* path, const FS_Archive* archive)
 	Handle fileHandle;
 
 	ret = FSUSER_OpenFile(&fileHandle, *archive, fsMakePath(PATH_ASCII, path), FS_OPEN_READ, FS_ATTRIBUTE_NONE);
+
+	// TODO: UTF-16
+	// ret = FSUSER_OpenFile(&fileHandle, *archive, fsMakePath(PATH_UTF16, path), FS_OPEN_READ, FS_ATTRIBUTE_NONE);
+
 	r(" > FSUSER_OpenDirectory: %lx\n", ret);
 
 	if (R_SUCCEEDED(ret))
@@ -36,6 +41,7 @@ bool fsFileExists(const char* path, const FS_Archive* archive)
 }
 
 bool fsDirExists(const char* path, const FS_Archive* archive)
+// bool fsDirExists(const u16* path, const FS_Archive* archive)
 {
 	if (!path || !archive) return -1;
 
@@ -47,6 +53,10 @@ bool fsDirExists(const char* path, const FS_Archive* archive)
 	Handle dirHandle;
 
 	ret = FSUSER_OpenDirectory(&dirHandle, *archive, fsMakePath(PATH_ASCII, path));
+	
+	// TODO: UTF-16
+	// ret = FSUSER_OpenDirectory(&dirHandle, *archive, fsMakePath(PATH_UTF16, path));
+
 	r(" > FSUSER_OpenDirectory: %lx\n", ret);
 
 	if (R_SUCCEEDED(ret))
@@ -59,6 +69,7 @@ bool fsDirExists(const char* path, const FS_Archive* archive)
 }
 
 Result fsCopyFile(const char* srcPath, const FS_Archive* srcArchive, const char* dstPath, const FS_Archive* dstArchive, u32 attributes)
+// Result fsCopyFile(const u16* srcPath, const FS_Archive* srcArchive, const u16* dstPath, const FS_Archive* dstArchive, u32 attributes)
 {
 	if (!srcPath || !srcArchive || !dstPath || !dstArchive) return -1;
 
@@ -76,10 +87,18 @@ Result fsCopyFile(const char* srcPath, const FS_Archive* srcArchive, const char*
 	consoleLog("fsCopyFile(\"%s\", %li, \"%s\", %li)\n", srcPath, srcArchive->id, dstPath, dstArchive->id);
 
 	ret = FSUSER_OpenFile(&dstHandle, *dstArchive, fsMakePath(PATH_ASCII, dstPath), FS_OPEN_WRITE | FS_OPEN_CREATE, attributes);
+
+	// TODO: UTF-16
+	// ret = FSUSER_OpenFile(&dstHandle, *dstArchive, fsMakePath(PATH_UTF16, dstPath), FS_OPEN_WRITE | FS_OPEN_CREATE, attributes);
+
 	r(" > FSUSER_OpenFile: %lx\n", ret);
 	if (R_FAILED(ret)) return ret;
 
 	ret = FSUSER_OpenFile(&srcHandle, *srcArchive, fsMakePath(PATH_ASCII, srcPath), FS_OPEN_READ, attributes);
+	
+	// TODO: UTF-16
+	// ret = FSUSER_OpenFile(&srcHandle, *srcArchive, fsMakePath(PATH_UTF16, srcPath), FS_OPEN_READ, attributes);
+	
 	r(" > FSUSER_OpenFile: %lx\n", ret);
 
 	if (R_SUCCEEDED(ret))
@@ -127,6 +146,10 @@ Result fsScanDir(fsEntry* dir, const FS_Archive* archive, bool rec)
 	dir->entryCount = 0;
 
 	ret = FSUSER_OpenDirectory(&dirHandle, *archive, fsMakePath(PATH_ASCII, dir->name));
+	
+	// TODO: UTF-16
+	// ret = FSUSER_OpenDirectory(&dirHandle, *archive, fsMakePath(PATH_UTF16, dir->name16));
+	
 	r(" > FSUSER_OpenDirectory: %lx\n", ret);
 	if (R_FAILED(ret)) return ret;
 
@@ -151,6 +174,9 @@ Result fsScanDir(fsEntry* dir, const FS_Archive* archive, bool rec)
 
 			unicodeToChar(entry->name, dirEntry.name, FS_MAX_FPATH_LENGTH);
 
+			// TODO: UTF-16
+			str16ncpy(entry->name16, dirEntry.name, FS_MAX_FPATH_LENGTH);
+
 			consoleLog("Entry: %s (%i)\n", entry->name, dir->entryCount+1);
 
 			entry->attributes = dirEntry.attributes;
@@ -166,6 +192,9 @@ Result fsScanDir(fsEntry* dir, const FS_Archive* archive, bool rec)
 				sprintf(entry->name, "%s/%s/", dir->name, entry->name);
 				fsScanDir(entry, archive, rec);
 				unicodeToChar(entry->name, dirEntry.name, FS_MAX_FPATH_LENGTH);
+
+				// TODO: UTF-16
+				str16ncpy(entry->name16, dirEntry.name, FS_MAX_FPATH_LENGTH);
 			}
 
 			/** Add the entry to the list ** START **/
@@ -209,6 +238,10 @@ Result fsScanDir(fsEntry* dir, const FS_Archive* archive, bool rec)
 						}
 						// Else if it is a bigger alpha string.
 						else if (strcmp(entry->name, tmpNextEntry->name) < 0)
+						
+						// TODO: UTF-16
+						// else if (str16cmp(entry->name16, tmpNextEntry->name16) < 0)
+						
 						{
 							if (tmpNextEntry == dir->firstEntry)
 							{
@@ -303,7 +336,10 @@ Result fsAddParentDir(fsEntry* dir)
 	if (!dir) return -1;
 
 	// If the dir is the root directory. (no!)
-	dir->isRootDirectory = !strcmp("/", dir->name) || !strcmp("", dir->name);
+	dir->isRootDirectory = strcmp("/", dir->name) == 0 || strcmp("", dir->name) == 0;
+
+	// TODO: UTF-16
+	// dir->isRootDirectory = (dir->name16[0] == '/' && dir->name16[1] == '\0') || dir->name16[0] == '\0';
 
 	if (dir->isRootDirectory)
 	{
@@ -312,8 +348,6 @@ Result fsAddParentDir(fsEntry* dir)
 
 		fsEntry* root = (fsEntry*) malloc(sizeof(fsEntry));
 		memset(root, 0, sizeof(fsEntry));
-
-		strcpy(root->name, "/");
 		root->attributes = dir->attributes | FS_ATTRIBUTE_DIRECTORY;
 		root->isDirectory = true;
 		root->isRealDirectory = false;
@@ -321,6 +355,12 @@ Result fsAddParentDir(fsEntry* dir)
 		root->nextEntry = dir->firstEntry;
 		root->firstEntry = NULL;
 		root->entryCount = 0;
+
+		strcpy(root->name, "/");
+
+		// TODO: UTF-16
+		// root->name16[0] = '/';
+		// root->name16[1] = '\0';
 
 		dir->firstEntry = root;
 		dir->entryCount++;
@@ -334,8 +374,6 @@ Result fsAddParentDir(fsEntry* dir)
 
 		fsEntry* root = (fsEntry*) malloc(sizeof(fsEntry));
 		memset(root, 0, sizeof(fsEntry));
-
-		strcpy(root->name, "..");
 		root->attributes = dir->attributes | FS_ATTRIBUTE_DIRECTORY;
 		root->isDirectory = true;
 		root->isRealDirectory = false;
@@ -343,6 +381,13 @@ Result fsAddParentDir(fsEntry* dir)
 		root->nextEntry = dir->firstEntry;
 		root->firstEntry = NULL;
 		root->entryCount = 0;
+
+		strcpy(root->name, "..");
+		
+		// TODO: UTF-16
+		// root->name16[0] = '.';
+		// root->name16[1] = '.';
+		// root->name16[2] = '\0';
 
 		dir->firstEntry = root;
 		dir->entryCount++;
@@ -361,18 +406,31 @@ Result fsGotoParentDir(fsEntry* dir)
 	char* p = path + strlen(path) - 2;
 	while (p > path && *p != '/') *p-- = '\0';
 
+	// TODO: UTF-16
+	// u16* path = dir->name16;
+	// u16* p = path + (str16len(path) - 2)*sizeof(u16);
+	// while (p > path && *p != '/') *p-- = '\0';
+
 	return 0;
 }
 
 Result fsGotoSubDir(fsEntry* dir, const char* subDir)
+// Result fsGotoSubDir(fsEntry* dir, const u16* subDir)
 {
 	if (!dir || !subDir) return -1;
 
 	char* path = dir->name;
-	char* dest = dir->name + strlen(dir->name);
+	char* dest = path + strlen(path);
 	strncat(dest, subDir, (dest - path) + FS_MAX_PATH_LENGTH - 1);
 	if (dest[strlen(dest+1)] != '/')
 		dest = strcat(dest, "/");
+
+	// TODO: UTF-16
+	// u16* path = dir->name16;
+	// u16* dest = path + str16len(path);
+	// u16 len = str16ncpy(dest + str16len(dest+sizeof(u16)), subDir, (dest - path)/sizeof(u16) + FS_MAX_PATH_LENGTH - 1);
+	// if (dest[str16len(dest+sizeof(u16))] != '/')
+	// 	dest[str16len(dest+sizeof(u16))+1] = '/';
 
 	return 0;
 }
