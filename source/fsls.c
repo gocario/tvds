@@ -164,7 +164,14 @@ Result fsScanDir(fsEntry* dir, const FS_Archive* archive, bool rec)
 
 			if (rec && entry->attributes & FS_ATTRIBUTE_DIRECTORY)
 			{
-				sprintf(entry->name, "%s/%s/", dir->name, entry->name);
+				u16 len;
+				u16 path[FS_MAX_PATH_LENGTH];
+				memset(path, 0, FS_MAX_PATH_LENGTH*sizeof(u16));
+				len = str16cpy(entry->name16, dir->name16);
+				entry->name16[len++] = '/';
+				str16cpy(entry->name16 + len, dirEntry.name);
+				entry->name16[len++] = '/';
+
 				fsScanDir(entry, archive, rec);
 
 				str16ncpy(entry->name16, dirEntry.name, FS_MAX_FPATH_LENGTH);
@@ -308,10 +315,6 @@ Result fsAddParentDir(fsEntry* dir)
 {
 	if (!dir) return -1;
 
-	// If the dir is the root directory. (no!)
-	// dir->isRootDirectory = strcmp("/", dir->name) == 0 || strcmp("", dir->name) == 0;
-
-	// TODO: UTF-16
 	dir->isRootDirectory = (dir->name16[0] == '/' && dir->name16[1] == '\0') || dir->name16[0] == '\0';
 
 	if (dir->isRootDirectory)
@@ -333,7 +336,7 @@ Result fsAddParentDir(fsEntry* dir)
 		root->name16[1] = '\0';
 
 		// TODO: Remove when native UTF-16 font.
-		unicodeToChar(root->name, root->name16, FS_MAX_PATH_LENGTH);
+		strcpy(root->name, "/");
 
 		dir->firstEntry = root;
 		dir->entryCount++;
@@ -360,7 +363,7 @@ Result fsAddParentDir(fsEntry* dir)
 		root->name16[2] = '\0';
 
 		// TODO: Remove when native UTF-16 font.
-		unicodeToChar(root->name, root->name16, FS_MAX_PATH_LENGTH);
+		strcpy(root->name, "..");
 
 		dir->firstEntry = root;
 		dir->entryCount++;

@@ -56,8 +56,8 @@ void fsDirInit(void)
 	saveDir.entry.name16[1] = sdmcDir.entry.name16[1] = '\0';
 
 	// TODO: Remove when native UTF-16 font.
-	unicodeToChar(saveDir.entry.name, saveDir.entry.name16, FS_MAX_FPATH_LENGTH);
-	unicodeToChar(sdmcDir.entry.name, sdmcDir.entry.name16, FS_MAX_FPATH_LENGTH);
+	strcpy(saveDir.entry.name, "/");
+	strcpy(sdmcDir.entry.name, "/");
 
 	saveDir.archive = &saveArchive;
 	sdmcDir.archive = &sdmcArchive;
@@ -419,6 +419,7 @@ Result fsDirCopyCurrentFolder(bool overwrite)
 {
 	fsEntry entry;
 	memset(entry.name, 0, FS_MAX_PATH_LENGTH);
+	memset(entry.name16, 0, FS_MAX_PATH_LENGTH);
 	entry.attributes = currentDir->entry.attributes;
 	entry.isDirectory = true;
 	entry.isRealDirectory = true;
@@ -472,6 +473,7 @@ void fsBackInit(u64 titleid)
 {
 	memset(&backDir, 0, sizeof(fsDir));
 	
+	// TODO: UTF-16
 	sprintf(backDir.entry.name, "/backup/%016llx/", titleid);
 
 	backDir.archive = &sdmcArchive;
@@ -547,14 +549,12 @@ void fsBackPrintSave(void)
 	fsDir saveDir;
 	memset(&saveDir, 0, sizeof(fsDir));
 
-	strcpy(saveDir.entry.name, "/");
-	
 	// TODO: UTF-16
 	saveDir.entry.name16[0] = '/';
 	saveDir.entry.name16[1] = '\0';
 	
 	// TODO: Remove when native UTF-16 font.
-	unicodeToChar(saveDir.entry.name, saveDir.entry.name16, FS_MAX_PATH_LENGTH);
+	strcpy(saveDir.entry.name, "/");
 
 	saveDir.archive = &saveArchive;
 	saveDir.entryOffsetId = 0;
@@ -651,11 +651,11 @@ Result fsBackExport(void)
 	saveDir.entry.isRealDirectory = true;
 	saveDir.entry.isRootDirectory = true;
 
-	// TODO: Remove when native UTF-16 font.
-	strcpy(saveDir.entry.name, "/");
-
 	saveDir.entry.name16[0] = '/';
 	saveDir.entry.name16[1] = '\0';
+
+	// TODO: Remove when native UTF-16 font.
+	strcpy(saveDir.entry.name, "/");
 
 	// Create the backup directory.
 	ret = FSUSER_CreateDirectory(sdmcArchive, fsMakePath(PATH_UTF16, backDir.entry.name16), FS_ATTRIBUTE_DIRECTORY);
@@ -693,12 +693,12 @@ Result fsBackImport(void)
 	saveDir.entry.isRealDirectory = true;
 	saveDir.entry.isRootDirectory = false;
 
-	// TODO: Remove when native UTF-16 font.
-	strcpy(saveDir.entry.name, "/");
-
 	// TODO: UTF-16
 	saveDir.entry.name16[0] = '/';
 	saveDir.entry.name16[1] = '\0';
+
+	// TODO: Remove when native UTF-16 font.
+	strcpy(saveDir.entry.name, "/");
 
 	// Delete the save archive content.
 	ret = FSUSER_DeleteDirectoryRecursively(*saveDir.archive, fsMakePath(PATH_UTF16, saveDir.entry.name16));
