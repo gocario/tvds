@@ -127,7 +127,7 @@ int main(void)
 	}
 
 	fsDirInit();
-	fsBackInit(titleid);
+	// fsBackInit(titleid);
 	switchState(&state);
 
 	drawHelp();
@@ -310,13 +310,13 @@ int main(void)
 			if (kDown & KEY_L)
 			{
 				// TODO: Prev
-				switchState(&state); // TODO: Uncomment
+				// switchState(&state); // TODO: Uncomment
 			}
 
 			if (kDown & KEY_R)
 			{
 				// TODO: Next
-				switchState(&state); // TODO: Uncomment
+				// switchState(&state); // TODO: Uncomment
 			}
 
 			if (kDown & KEY_SELECT)
@@ -333,7 +333,7 @@ int main(void)
 	}
 
 	fsDirExit();
-	fsBackExit();
+	// fsBackExit();
 	FS_Exit();
 	{
 		hidScanInput();

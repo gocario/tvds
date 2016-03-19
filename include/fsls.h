@@ -33,8 +33,7 @@ typedef struct fsEntry
  * @param[in] archive The archive of the file.
  * @return Whether the file exists.
  */
-bool fsFileExists(const char* path, const FS_Archive* archive);
-// bool fsFileExists(const u16* path, const FS_Archive* archive);
+bool fsFileExists(const u16* path, const FS_Archive* archive);
 
 /**
  * @brief Checks if a directory exists.
@@ -42,8 +41,7 @@ bool fsFileExists(const char* path, const FS_Archive* archive);
  * @param[in] archive The archive of the directory.
  * @return Whether the directory exists.
  */
-bool fsDirExists(const char* path, const FS_Archive* archive);
-// bool fsDirExists(const u16* path, const FS_Archive* archive);
+bool fsDirExists(const u16* path, const FS_Archive* archive);
 
 /**
  * @brief Copies a file from an archive to another archive.
@@ -53,8 +51,7 @@ bool fsDirExists(const char* path, const FS_Archive* archive);
  * @param[in] dstArchive The archive of the destination file/directory.
  * @param attributes The attributes of the file/directory.
  */
-Result fsCopyFile(const char* srcPath, const FS_Archive* srcArchive, const char* dstPath, const FS_Archive* dstArchive, u32 attributes);
-// Result fsCopyFile(const u16* srcPath, const FS_Archive* srcArchive, const u16* dstPath, const FS_Archive* dstArchive, u32 attributes);
+Result fsCopyFile(const u16* srcPath, const FS_Archive* srcArchive, const u16* dstPath, const FS_Archive* dstArchive, u32 attributes);
 
 /**
  * @brief Scans a directory based on an archive.
@@ -87,5 +84,4 @@ Result fsGotoParentDir(fsEntry* dir);
  * @param[in] dir The directory.
  * @param[in] subDir The subdir path.
  */
-Result fsGotoSubDir(fsEntry* dir, const char* subDir);
-// Result fsGotoSubDir(fsEntry* dir, const u16* subDir);
+Result fsGotoSubDir(fsEntry* dir, const u16* subDir);

@@ -52,12 +52,12 @@ void fsDirInit(void)
 	memset(&saveDir, 0, sizeof(fsDir));
 	memset(&sdmcDir, 0, sizeof(fsDir));
 
-	strcpy(saveDir.entry.name, "/"); // TODO Replace by "/"
-	strcpy(sdmcDir.entry.name, "/"); // TODO Replace by "/"
-
-	// TODO: UTF-16
 	saveDir.entry.name16[0] = sdmcDir.entry.name16[0] = '/';
 	saveDir.entry.name16[1] = sdmcDir.entry.name16[1] = '\0';
+
+	// TODO: Remove when native UTF-16 font.
+	unicodeToChar(saveDir.entry.name, saveDir.entry.name16, FS_MAX_FPATH_LENGTH);
+	unicodeToChar(sdmcDir.entry.name, sdmcDir.entry.name16, FS_MAX_FPATH_LENGTH);
 
 	saveDir.archive = &saveArchive;
 	sdmcDir.archive = &sdmcArchive;
@@ -118,7 +118,7 @@ static void fsDirPrint(fsDir* dir, const char* data)
 			// Tricky-hacky
 			dir->entrySelected = next;
 		}
-		// Else if the entry is just a directory or a simple file
+		// Else if the entry is just a simple entry
 		else if (next->isDirectory) consoleForegroundColor(CYAN);
 		else consoleForegroundColor(WHITE);
 
@@ -126,7 +126,7 @@ static void fsDirPrint(fsDir* dir, const char* data)
 		printf("\x1B[%u;3H%.22s", row++, next->name);
 		consoleResetColor();
 
-		// Iterate though linked list
+		// Iterate through linked list
 		next = next->nextEntry;
 	}
 }
@@ -219,9 +219,10 @@ void fsDirMove(s16 count)
 
 Result fsDirGotoParentDir(void)
 {
-	consoleLog("Opening -> %s/../\n", currentDir->entry.name);
+	consoleLog("Opening -> %s ../\n", currentDir->entry.name);
 
 	Result ret = 1;
+
 	if (!currentDir->entry.isRootDirectory)
 	{
 		ret = fsGotoParentDir(&currentDir->entry);
@@ -231,6 +232,7 @@ Result fsDirGotoParentDir(void)
 			fsStackPop(&currentDir->entryStack, &currentDir->entryOffsetId, &currentDir->entrySelectedId);
 		}
 	}
+
 	return ret;
 }
 
@@ -239,6 +241,7 @@ Result fsDirGotoSubDir(void)
 	consoleLog("Opening -> %s/\n", currentDir->entrySelected->name);
 
 	Result ret = 1;
+
 	if (currentDir->entrySelected)
 	{
 		if (!currentDir->entrySelected->isRealDirectory)
@@ -250,7 +253,7 @@ Result fsDirGotoSubDir(void)
 		}
 		else if (currentDir->entrySelected->isDirectory)
 		{
-			Result ret = fsGotoSubDir(&currentDir->entry, currentDir->entrySelected->name);
+			Result ret = fsGotoSubDir(&currentDir->entry, currentDir->entrySelected->name16);
 			if (ret == 0)
 			{
 				fsStackPush(&currentDir->entryStack, currentDir->entryOffsetId, currentDir->entrySelectedId);
@@ -258,6 +261,7 @@ Result fsDirGotoSubDir(void)
 			}
 		}
 	}
+	
 	return ret;
 }
 
@@ -326,36 +330,24 @@ static Result fsDirCopy(fsEntry* srcEntry, fsDir* srcDir, fsDir* dstDir, bool ov
 		srcPath.isRealDirectory = srcEntry->isRealDirectory;
 		srcPath.isRootDirectory = srcEntry->isRootDirectory;
 
-		memset(srcPath.name, 0, FS_MAX_PATH_LENGTH);
-		strcpy(srcPath.name, dstDir->entry.name);
-		if (!srcPath.isRootDirectory) strcat(srcPath.name, srcEntry->name);
-
-		// TODO: UTF-16
 		memset(srcPath.name16, 0, FS_MAX_PATH_LENGTH*sizeof(u16));
 		len = str16cpy(srcPath.name16, dstDir->entry.name16);
-		if (!srcPath.isRootDirectory) str16cpy(srcPath.name16 + len*sizeof(u16), srcEntry->name16);
+		if (!srcPath.isRootDirectory) str16cpy(srcPath.name16 + len, srcEntry->name16);
 
-		if (fsDirExists(srcPath.name, dstDir->archive) && !overwrite)
+		if (fsDirExists(srcPath.name16, dstDir->archive) && !overwrite)
 		{
-			if (!fsWaitOverwrite(srcPath.name)) return FS_USER_INTERRUPT;
+			// TODO: Uncomment
+			// if (!fsWaitOverwrite(srcPath.name)) return FS_USER_INTERRUPT;
 			consoleLog("Overwrite validated!\n");
 		}
 		else if (!srcPath.isRootDirectory)
 		{
-			FS_CreateDirectory(srcPath.name, dstDir->archive);
-			
-			// TODO: UTF-16
-			// FSUSER_CreateDirectory(*dstDir->archive, fsMakePath(PATH_UTF16, srcPath.name16), FS_ATTRIBUTE_DIRECTORY);
+			FSUSER_CreateDirectory(*dstDir->archive, fsMakePath(PATH_UTF16, srcPath.name16), FS_ATTRIBUTE_DIRECTORY);
 		}
 
-		memset(srcPath.name, 0, FS_MAX_PATH_LENGTH);
-		if (!srcPath.isRootDirectory) strcpy(srcPath.name, srcDir->entry.name);
-		strcat(srcPath.name, srcEntry->name);
-
-		// TODO: UTF-16
 		memset(srcPath.name16, 0, FS_MAX_PATH_LENGTH*sizeof(u16));
 		if (!srcPath.isRootDirectory) len = str16cpy(srcPath.name16, srcDir->entry.name16); else len = 0;
-		str16cpy(srcPath.name16 + len*sizeof(u16), srcEntry->name16);
+		str16cpy(srcPath.name16 + len, srcEntry->name16);
 
 		fsScanDir(&srcPath, srcDir->archive, false);
 		fsEntry* next = srcPath.firstEntry;
@@ -367,16 +359,10 @@ static Result fsDirCopy(fsEntry* srcEntry, fsDir* srcDir, fsDir* dstDir, bool ov
 			srcPath.isRealDirectory = next->isRealDirectory;
 			srcPath.isRootDirectory = next->isRootDirectory;
 
-			memset(srcPath.name, 0, FS_MAX_PATH_LENGTH);
-			strcat(srcPath.name, srcEntry->name);
-			strcat(srcPath.name, "/");
-			strcat(srcPath.name, next->name);
-
-			// TODO: UTF-16
 			memset(srcPath.name16, 0, FS_MAX_PATH_LENGTH*sizeof(u16));
 			len = str16cpy(srcPath.name16, srcEntry->name16);
 			srcPath.name16[len++] = '/'; srcPath.name16[len] = '\0';
-			str16cpy(srcPath.name16 + len*sizeof(u16), next->name16);
+			str16cpy(srcPath.name16 + len, next->name16);
 
 			fsDirCopy(&srcPath, srcDir, dstDir, overwrite);
 
@@ -389,34 +375,21 @@ static Result fsDirCopy(fsEntry* srcEntry, fsDir* srcDir, fsDir* dstDir, bool ov
 	}
 	else
 	{
-		char srcPath[FS_MAX_PATH_LENGTH];
-		char dstPath[FS_MAX_PATH_LENGTH];
+		u16 srcPath[FS_MAX_PATH_LENGTH];
+		u16 dstPath[FS_MAX_PATH_LENGTH];
 
-		memset(srcPath, 0, FS_MAX_PATH_LENGTH);
-		strcpy(srcPath, srcDir->entry.name);
-		strcat(srcPath, srcEntry->name);
+		memset(srcPath, 0, FS_MAX_PATH_LENGTH*sizeof(u16));
+		len = str16cpy(srcPath, srcDir->entry.name16);
+		str16cpy(srcPath + len, srcEntry->name16);
 
-		memset(dstPath, 0, FS_MAX_PATH_LENGTH);
-		strcpy(dstPath, dstDir->entry.name);
-		strcat(dstPath, srcEntry->name);
-
-		// TODO: UTF-16
-		// u16 srcPath[FS_MAX_PATH_LENGTH];
-		// u16 dstPath[FS_MAX_PATH_LENGTH];
-
-		// TODO: UTF-16
-		// memset(srcPath, 0, FS_MAX_PATH_LENGTH*sizeof(u16));
-		// len = str16cpy(srcPath, srcDir->entry.name16);
-		// str16cpy(srcPath + len*sizeof(u16), srcEntry->name16);
-
-		// TODO: UTF-16
-		// memset(dstPath, 0, FS_MAX_PATH_LENGTH*sizeof(u16));
-		// len = str16cpy(dstPath, dstDir->entry.name16);
-		// str16cpy(dstPath + len*sizeof(u16), srcEntry->name16);
+		memset(dstPath, 0, FS_MAX_PATH_LENGTH*sizeof(u16));
+		len = str16cpy(dstPath, dstDir->entry.name16);
+		str16cpy(dstPath + len, srcEntry->name16);
 
 		if (fsFileExists(dstPath, dstDir->archive) && !overwrite)
 		{
-			if (!fsWaitOverwrite(dstPath)) return FS_USER_INTERRUPT;
+			// TODO: Uncomment
+			// if (!fsWaitOverwrite(dstPath)) return FS_USER_INTERRUPT;
 			consoleLog("Overwrite validated!\n");
 		}
 
@@ -424,12 +397,9 @@ static Result fsDirCopy(fsEntry* srcEntry, fsDir* srcDir, fsDir* dstDir, bool ov
 
 		if (ret == FS_OUT_OF_RESOURCE || ret == FS_OUT_OF_RESOURCE_2)
 		{
-			fsWaitOutOfResource(dstPath);
-
-			FS_DeleteFile(dstPath, dstDir->archive);
-
-			// TODO: UTF-16
-			// FSUSER_DeleteFile(*dstDir->archive, fsMakePath(PATH_UTF16, dstPath));
+			// TODO: Uncomment
+			// fsWaitOutOfResource(dstPath);
+			FSUSER_DeleteFile(*dstDir->archive, fsMakePath(PATH_UTF16, dstPath));
 		}
 
 		return ret;
@@ -463,42 +433,32 @@ Result fsDirDeleteCurrentEntry(void)
 {
 	Result ret = -3;
 
-	char path[FS_MAX_PATH_LENGTH];
-	memset(path, 0, FS_MAX_PATH_LENGTH);
-	strcpy(path, currentDir->entry.name);
-	strcat(path, currentDir->entrySelected->name);
-
-	// TODO: UTF-16
-	// u16 len;
-	// u16 path[FS_MAX_PATH_LENGTH];
-	// memset(path, 0, FS_MAX_PATH_LENGTH*sizeof(u16));
-	// len = str16cpy(path, currentDir->entry.name16);
-	// str16cpy(path + len*sizeof(u16, currentDir->entrySelected->name16);
+	u16 len;
+	u16 path[FS_MAX_PATH_LENGTH];
+	memset(path, 0, FS_MAX_PATH_LENGTH*sizeof(u16));
+	len = str16cpy(path, currentDir->entry.name16);
+	str16cpy(path + len, currentDir->entrySelected->name16);
 
 	if (currentDir->entrySelected->isDirectory)
 	{
 		if (currentDir->entrySelected->isRealDirectory)
 		{
-			if (!fsWaitDelete(path)) return FS_USER_INTERRUPT;
+			// TODO: Uncomment
+			// if (!fsWaitDelete(path)) return FS_USER_INTERRUPT;
 			consoleLog("Delete validated!\n");
 
-			ret = FS_DeleteDirectoryRecursively(path, currentDir->archive);
-
-			// TODO: UTF-16
-			// ret = FSUSER_DeleteDirectoryRecursively(*currentDir->archive, fsMakePath(PATH_UTF16, path));
+			ret = FSUSER_DeleteDirectoryRecursively(*currentDir->archive, fsMakePath(PATH_UTF16, path));
 
 			fsDirRefreshDir(currentDir, true);
 		}
 	}
 	else
 	{
-		if (!fsWaitDelete(path)) return FS_USER_INTERRUPT;
+		// TODO: Uncomment
+		// if (!fsWaitDelete(path)) return FS_USER_INTERRUPT;
 		consoleLog("Delete validated!\n");
 
-		ret = FS_DeleteFile(path, currentDir->archive);
-
-		// TODO: UTF-16
-		// ret = FSUSER_DeleteFile(*currentDir->archive, fsMakePath(PATH_UTF16, path));
+		ret = FSUSER_DeleteFile(*currentDir->archive, fsMakePath(PATH_UTF16, path));
 
 		fsDirRefreshDir(currentDir, true);
 	}
@@ -517,10 +477,7 @@ void fsBackInit(u64 titleid)
 	backDir.archive = &sdmcArchive;
 
 	FS_CreateDirectory("/backup/", backDir.archive);
-	FS_CreateDirectory(backDir.entry.name, backDir.archive);
-
-	// TODO: UTF-16
-	// FSUSER_CreateDirectory(*backDir.archive, fsMakePath(PATH_UTF16, backDir.entry.name16), FS_ATTRIBUTE_DIRECTORY);
+	FSUSER_CreateDirectory(*backDir.archive, fsMakePath(PATH_UTF16, backDir.entry.name16), FS_ATTRIBUTE_DIRECTORY);
 
 	fsDirRefreshDir(&backDir, false);
 }
@@ -589,11 +546,15 @@ void fsBackPrintSave(void)
 {
 	fsDir saveDir;
 	memset(&saveDir, 0, sizeof(fsDir));
+
 	strcpy(saveDir.entry.name, "/");
 	
 	// TODO: UTF-16
 	saveDir.entry.name16[0] = '/';
 	saveDir.entry.name16[1] = '\0';
+	
+	// TODO: Remove when native UTF-16 font.
+	unicodeToChar(saveDir.entry.name, saveDir.entry.name16, FS_MAX_PATH_LENGTH);
 
 	saveDir.archive = &saveArchive;
 	saveDir.entryOffsetId = 0;
@@ -666,20 +627,20 @@ Result fsBackExport(void)
 	struct tm* tm_time = gmtime(&t_time);
 
 	// The backup folder name.
-	char path[FS_MAX_PATH_LENGTH];
-	memset(path, 0, FS_MAX_PATH_LENGTH);
-	sprintf(path, "%04u-%02u-%02u--%02u-%02u-%02u/",
-		tm_time->tm_year+1900,
-		tm_time->tm_mon+1,
-		tm_time->tm_yday,
-		tm_time->tm_hour,
-		tm_time->tm_min+tm_time->tm_sec/60,
-		tm_time->tm_sec%60
-	);
+	// char path[FS_MAX_PATH_LENGTH];
+	// memset(path, 0, FS_MAX_PATH_LENGTH);
+	// sprintf(path, "%04u-%02u-%02u--%02u-%02u-%02u/",
+	// 	tm_time->tm_year+1900,
+	// 	tm_time->tm_mon+1,
+	// 	tm_time->tm_yday,
+	// 	tm_time->tm_hour,
+	// 	tm_time->tm_min+tm_time->tm_sec/60,
+	// 	tm_time->tm_sec%60
+	// );
 
 	// TODO: UTF-16
-	// u16 path[FS_MAX_PATH_LENGTH];
-	// memset(path, 0, FS_MAX_PATH_LENGTH*sizeof(u16));
+	u16 path[FS_MAX_PATH_LENGTH];
+	memset(path, 0, FS_MAX_PATH_LENGTH*sizeof(u16));
 	// sprintf( ... );
 
 	// The root dir of the save archive.
@@ -690,21 +651,19 @@ Result fsBackExport(void)
 	saveDir.entry.isRealDirectory = true;
 	saveDir.entry.isRootDirectory = true;
 
+	// TODO: Remove when native UTF-16 font.
 	strcpy(saveDir.entry.name, "/");
 
-	// TODO: UTF-16
 	saveDir.entry.name16[0] = '/';
 	saveDir.entry.name16[1] = '\0';
 
 	// Create the backup directory.
-	ret = FS_CreateDirectory(backDir.entry.name, &sdmcArchive);
-	
-	// TODO: UTF-16
-	// ret = FSUSER_CreateDirectory(*sdmcArchive, fsMakePath(PATH_UTF16, backDir.entry.name16), FS_ATTRIBUTE_DIRECTORY);
+	ret = FSUSER_CreateDirectory(sdmcArchive, fsMakePath(PATH_UTF16, backDir.entry.name16), FS_ATTRIBUTE_DIRECTORY);
 
 	// Go to the backup directory.
 	fsFreeDir(&backDir.entry);
-	fsGotoSubDir(&backDir.entry, path);
+		// TODO: Uncomment
+	// fsGotoSubDir(&backDir.entry, path);
 
 	// Copy the current save directory to the sdmc archive
 	ret = fsDirCopy(&saveDir.entry, &saveDir, &backDir, true);
@@ -734,6 +693,7 @@ Result fsBackImport(void)
 	saveDir.entry.isRealDirectory = true;
 	saveDir.entry.isRootDirectory = false;
 
+	// TODO: Remove when native UTF-16 font.
 	strcpy(saveDir.entry.name, "/");
 
 	// TODO: UTF-16
@@ -741,14 +701,11 @@ Result fsBackImport(void)
 	saveDir.entry.name16[1] = '\0';
 
 	// Delete the save archive content.
-	ret = FS_DeleteDirectoryRecursively(saveDir.entry.name, saveDir.archive);
-
-	// TODO: UTF-16
-	// ret = FSUSER_DeleteDirectoryRecursively(*saveDir.archive, fsMakePath(PATH_UTF16, saveDir.entry.name16));
+	ret = FSUSER_DeleteDirectoryRecursively(*saveDir.archive, fsMakePath(PATH_UTF16, saveDir.entry.name16));
 
 	// Go to the backup directory.
 	fsFreeDir(&backDir.entry);
-	fsGotoSubDir(&backDir.entry, backDir.entrySelected->name);
+	fsGotoSubDir(&backDir.entry, backDir.entrySelected->name16);
 
 	// The fake entry to copy the current directory to.
 	fsEntry entry;
@@ -772,25 +729,17 @@ Result fsBackDelete(void)
 {
 	Result ret = -3;
 
-	char path[FS_MAX_PATH_LENGTH];
-	memset(path, 0, FS_MAX_PATH_LENGTH);
-	strcpy(path, backDir.entry.name);
-	strcat(path, backDir.entrySelected->name);
+	u16 len;
+	u16 path[FS_MAX_PATH_LENGTH];
+	memset(path, 0, FS_MAX_PATH_LENGTH*sizeof(u16));
+	len = str16cpy(path, backDir.entry.name16);
+	str16cpy(path + len, backDir.entrySelected->name16);
 
-	// TODO: UTF-16
-	// u16 len;
-	// u16 path[FS_MAX_PATH_LENGTH];
-	// memset(path, 0, FS_MAX_PATH_LENGTH*sizeof(u16));
-	// len = str16cpy(path, backDir.entry.name16);
-	// str16cpy(path + len*sizeof(u16), backDir.entrySelected->name16);
-
-	if (!fsWaitDelete(path)) return FS_USER_INTERRUPT;
+	// TODO: Uncomment
+	// if (!fsWaitDelete(path)) return FS_USER_INTERRUPT;
 	consoleLog("Delete validated!\n");
 
-	ret = FS_DeleteDirectoryRecursively(path, backDir.archive);
-
-	// TODO: UTF-16
-	// ret = FSUSER_DeleteDirectory(*backDir.archive, fsMakePath(PATH_UTF16, path));
+	ret = FSUSER_DeleteDirectory(*backDir.archive, fsMakePath(PATH_UTF16, path));
 
 	fsDirRefreshDir(&backDir, false);
 
