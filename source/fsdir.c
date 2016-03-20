@@ -7,6 +7,7 @@
 
 #include <3ds/os.h>
 #include <3ds/result.h>
+#include <3ds/util/utf.h>
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -270,11 +271,16 @@ Result fsDirGotoSubDir(void)
  * @param path The path which causes the warning.
  * @return Whether the waited key was pressed.
  */
-static bool fsWaitOverwrite(const char* path)
+static bool fsWaitOverwrite(const u16* path)
 {
-	consoleLog("[path=%s]\n", path);
-	consoleLog("Overwrite detected!\n");
-	consoleLog("Press [Select] to confirm the overwrite.\n");
+	consoleSelect(&logConsole);
+	printf("[path=");
+	for (u16 i = 0; path[i] && i < FS_MAX_PATH_LENGTH; i++)
+		printf("%c", (u8) path[i]);
+	printf("]\n");
+	printf("Overwrite detected!\n");
+	printf("Press [Select] to confirm the overwrite.\n");
+	consoleSelectDefault();
 
 	return doKey(KEY_SELECT);
 }
@@ -284,11 +290,16 @@ static bool fsWaitOverwrite(const char* path)
  * @param path The path which causes the warning.
  * @return Whether the waited key was pressed.
  */
-static bool fsWaitDelete(const char* path)
+static bool fsWaitDelete(const u16* path)
 {
-	consoleLog("[path=%s]\n", path);
-	consoleLog("Delete asked!\n");
-	consoleLog("Press [Select] to confirm the delete.\n");
+	consoleSelect(&logConsole);
+	printf("[path=");
+	for (u16 i = 0; path[i] && i < FS_MAX_PATH_LENGTH; i++)
+		printf("%c", (u8) path[i]);
+	printf("]\n");
+	printf("Delete asked!\n");
+	printf("Press [Select] to confirm the delete.\n");
+	consoleSelectDefault();
 
 	return doKey(KEY_SELECT);
 }
@@ -298,11 +309,16 @@ static bool fsWaitDelete(const char* path)
  * @param path The path which causes the warning.
  * @return Whether the waited key was pressed.
  */
-static bool fsWaitOutOfResource(const char* path)
+static bool fsWaitOutOfResource(const u16* path)
 {
-	consoleLog("[path=%s]\n", path);
-	consoleLog("The file was too big for the archive!\n");
-	consoleLog("Press any key to continue.\n");
+	consoleSelect(&logConsole);
+	printf("[path=");
+	for (u16 i = 0; path[i] && i < FS_MAX_PATH_LENGTH; i++)
+		printf("%c", (u8) path[i]);
+	printf("]\n");
+	printf("The file was too big for the archive!\n");
+	printf("Press any key to continue.\n");
+	consoleSelectDefault();
 
 	return doKey(KEY_ANY);
 }
@@ -336,8 +352,7 @@ static Result fsDirCopy(fsEntry* srcEntry, fsDir* srcDir, fsDir* dstDir, bool ov
 
 		if (fsDirExists(srcPath.name16, dstDir->archive) && !overwrite)
 		{
-			// TODO: Uncomment
-			// if (!fsWaitOverwrite(srcPath.name)) return FS_USER_INTERRUPT;
+			if (!fsWaitOverwrite(srcPath.name16)) return FS_USER_INTERRUPT;
 			consoleLog("Overwrite validated!\n");
 		}
 		else if (!srcPath.isRootDirectory)
@@ -388,8 +403,7 @@ static Result fsDirCopy(fsEntry* srcEntry, fsDir* srcDir, fsDir* dstDir, bool ov
 
 		if (fsFileExists(dstPath, dstDir->archive) && !overwrite)
 		{
-			// TODO: Uncomment
-			// if (!fsWaitOverwrite(dstPath)) return FS_USER_INTERRUPT;
+			if (!fsWaitOverwrite(dstPath)) return FS_USER_INTERRUPT;
 			consoleLog("Overwrite validated!\n");
 		}
 
@@ -397,8 +411,7 @@ static Result fsDirCopy(fsEntry* srcEntry, fsDir* srcDir, fsDir* dstDir, bool ov
 
 		if (ret == FS_OUT_OF_RESOURCE || ret == FS_OUT_OF_RESOURCE_2)
 		{
-			// TODO: Uncomment
-			// fsWaitOutOfResource(dstPath);
+			fsWaitOutOfResource(dstPath);
 			FSUSER_DeleteFile(*dstDir->archive, fsMakePath(PATH_UTF16, dstPath));
 		}
 
@@ -444,8 +457,7 @@ Result fsDirDeleteCurrentEntry(void)
 	{
 		if (currentDir->entrySelected->isRealDirectory)
 		{
-			// TODO: Uncomment
-			// if (!fsWaitDelete(path)) return FS_USER_INTERRUPT;
+			if (!fsWaitDelete(path)) return FS_USER_INTERRUPT;
 			consoleLog("Delete validated!\n");
 
 			ret = FSUSER_DeleteDirectoryRecursively(*currentDir->archive, fsMakePath(PATH_UTF16, path));
@@ -455,8 +467,7 @@ Result fsDirDeleteCurrentEntry(void)
 	}
 	else
 	{
-		// TODO: Uncomment
-		// if (!fsWaitDelete(path)) return FS_USER_INTERRUPT;
+		if (!fsWaitDelete(path)) return FS_USER_INTERRUPT;
 		consoleLog("Delete validated!\n");
 
 		ret = FSUSER_DeleteFile(*currentDir->archive, fsMakePath(PATH_UTF16, path));
@@ -473,8 +484,10 @@ void fsBackInit(u64 titleid)
 {
 	memset(&backDir, 0, sizeof(fsDir));
 	
-	// TODO: UTF-16
 	sprintf(backDir.entry.name, "/backup/%016llx/", titleid);
+
+	// TODO: UTF-16
+	utf8_to_utf16(backDir.entry.name16, backDir.entry.name, strlen(backDir.entry.name));
 
 	backDir.archive = &sdmcArchive;
 
@@ -549,7 +562,6 @@ void fsBackPrintSave(void)
 	fsDir saveDir;
 	memset(&saveDir, 0, sizeof(fsDir));
 
-	// TODO: UTF-16
 	saveDir.entry.name16[0] = '/';
 	saveDir.entry.name16[1] = '\0';
 	
@@ -615,9 +627,7 @@ void fsBackMove(s16 count)
 Result fsBackExport(void)
 {
 	// (save->sdmc)
-
 	// TODO: Create the new entry backup.
-
 	// TODO: Copy the whole save archive content to the new entry.
 
 	Result ret;
@@ -627,21 +637,21 @@ Result fsBackExport(void)
 	struct tm* tm_time = gmtime(&t_time);
 
 	// The backup folder name.
-	// char path[FS_MAX_PATH_LENGTH];
-	// memset(path, 0, FS_MAX_PATH_LENGTH);
-	// sprintf(path, "%04u-%02u-%02u--%02u-%02u-%02u/",
-	// 	tm_time->tm_year+1900,
-	// 	tm_time->tm_mon+1,
-	// 	tm_time->tm_yday,
-	// 	tm_time->tm_hour,
-	// 	tm_time->tm_min+tm_time->tm_sec/60,
-	// 	tm_time->tm_sec%60
-	// );
+	char path8[FS_MAX_PATH_LENGTH];
+	memset(path8, 0, FS_MAX_PATH_LENGTH);
+	sprintf(path8, "%04u-%02u-%02u--%02u-%02u-%02u/",
+		tm_time->tm_year+1900,
+		tm_time->tm_mon+1,
+		tm_time->tm_yday,
+		tm_time->tm_hour,
+		tm_time->tm_min+tm_time->tm_sec/60,
+		tm_time->tm_sec%60
+	);
 
 	// TODO: UTF-16
 	u16 path[FS_MAX_PATH_LENGTH];
 	memset(path, 0, FS_MAX_PATH_LENGTH*sizeof(u16));
-	// sprintf( ... );
+	utf8_to_utf16(path, (u8*) path8, strlen(path8));
 
 	// The root dir of the save archive.
 	fsDir saveDir;
@@ -662,8 +672,7 @@ Result fsBackExport(void)
 
 	// Go to the backup directory.
 	fsFreeDir(&backDir.entry);
-		// TODO: Uncomment
-	// fsGotoSubDir(&backDir.entry, path);
+	fsGotoSubDir(&backDir.entry, path);
 
 	// Copy the current save directory to the sdmc archive
 	ret = fsDirCopy(&saveDir.entry, &saveDir, &backDir, true);
@@ -678,9 +687,7 @@ Result fsBackExport(void)
 Result fsBackImport(void)
 {
 	// (sdmc->save)
-
 	// TODO: Delete the whole save archive content.
-
 	// TODO: Copy the selected entry content to the save archive.
 
 	Result ret;
@@ -693,7 +700,6 @@ Result fsBackImport(void)
 	saveDir.entry.isRealDirectory = true;
 	saveDir.entry.isRootDirectory = false;
 
-	// TODO: UTF-16
 	saveDir.entry.name16[0] = '/';
 	saveDir.entry.name16[1] = '\0';
 
@@ -735,8 +741,7 @@ Result fsBackDelete(void)
 	len = str16cpy(path, backDir.entry.name16);
 	str16cpy(path + len, backDir.entrySelected->name16);
 
-	// TODO: Uncomment
-	// if (!fsWaitDelete(path)) return FS_USER_INTERRUPT;
+	if (!fsWaitDelete(path)) return FS_USER_INTERRUPT;
 	consoleLog("Delete validated!\n");
 
 	ret = FSUSER_DeleteDirectory(*backDir.archive, fsMakePath(PATH_UTF16, path));

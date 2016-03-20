@@ -106,23 +106,23 @@ int main(void)
 	{
 		consoleLog("\nCouldn't initialize the FS module!\n");
 		consoleLog("Have you selected a title?\n");
-		printf("Error code: 0x%lx\n", ret);
+		consoleLog("Error code: 0x%lx\n", ret);
 		// state = STATE_ERROR;
 	}
 
 	ret = saveInit();
 	if (R_FAILED(ret))
 	{
-		printf("\nCouldn't initialize the Save module!\n");
-		printf("Error code: 0x%lx\n", ret);
+		consoleLog("\nCouldn't initialize the Save module!\n");
+		consoleLog("Error code: 0x%lx\n", ret);
 		// state = BACKUP_ERROR;
 	}
 
 	ret = saveGetTitleId(&titleid);
 	if (R_FAILED(ret))
 	{
-		printf("\nCouldn't get the title id of the game!\n");
-		printf("Error code: 0x%lx\n", ret);
+		consoleLog("\nCouldn't get the title id of the game!\n");
+		consoleLog("Error code: 0x%lx\n", ret);
 		// state = BACKUP_ERROR;
 	}
 
@@ -345,6 +345,7 @@ int main(void)
 			Result ret = saveRemoveSecureValue(titleid, mediaType, &out);
 			if (R_FAILED(ret))
 			{
+				consoleSelect(&consoleLog);
 				printf("\nSecure value not removed.\n");
 				printf("It might already be unitialized.\n");
 				printf("Error code: 0x%lx (%i)\n", ret, out);
