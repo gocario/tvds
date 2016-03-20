@@ -69,7 +69,7 @@ void consoleResetColor(void)
 void consoleForegroundColor(ConsoleColor color)
 {
 	// If bright color
-	if (color > 7)
+	if (color > SILVER)
 	{
 		printf("\x1B[3%d;1m", color % 8);
 	}
@@ -83,7 +83,7 @@ void consoleForegroundColor(ConsoleColor color)
 void consoleBackgroundColor(ConsoleColor color)
 {
 	// If bright color
-	if (color > 7)
+	if (color > SILVER)
 	{
 		printf("\x1B[4%d;1m", color % 8);
 	}

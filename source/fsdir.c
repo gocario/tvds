@@ -487,7 +487,7 @@ void fsBackInit(u64 titleid)
 	sprintf(backDir.entry.name, "/backup/%016llx/", titleid);
 
 	// TODO: UTF-16
-	utf8_to_utf16(backDir.entry.name16, backDir.entry.name, strlen(backDir.entry.name));
+	utf8_to_utf16(backDir.entry.name16, (u8*) backDir.entry.name, strlen(backDir.entry.name));
 
 	backDir.archive = &sdmcArchive;
 
@@ -495,6 +495,7 @@ void fsBackInit(u64 titleid)
 	FSUSER_CreateDirectory(*backDir.archive, fsMakePath(PATH_UTF16, backDir.entry.name16), FS_ATTRIBUTE_DIRECTORY);
 
 	fsDirRefreshDir(&backDir, false);
+	fsDirRefreshDir(&sdmcDir, false);
 }
 
 void fsBackExit(void)
@@ -600,8 +601,7 @@ void fsBackMove(s16 count)
 	if (backDir.entrySelectedId < 0)
 	{
 		backDir.entrySelectedId = backDir.entry.entryCount-1;
-		backDir.entryOffsetId = (backDir.entry.entryCount > entryPrintCount ?
-			backDir.entry.entryCount - entryPrintCount : 0);
+		backDir.entryOffsetId = (backDir.entry.entryCount > entryPrintCount ? backDir.entry.entryCount - entryPrintCount : 0);
 	}
 
 	if (backDir.entrySelectedId > backDir.entry.entryCount-1)
@@ -612,15 +612,12 @@ void fsBackMove(s16 count)
 
 	if (backDir.entryOffsetId >= backDir.entrySelectedId)
 	{
-		backDir.entryOffsetId = (backDir.entrySelectedId > 0 ?
-			backDir.entrySelectedId-1 : backDir.entrySelectedId);
+		backDir.entryOffsetId = backDir.entrySelectedId + (backDir.entrySelectedId > 0 ? -1 : 0);
 	}
 
-	else if (backDir.entrySelectedId > entryPrintCount-2 && count > 0 &&
-		backDir.entryOffsetId + entryPrintCount-2 < backDir.entrySelectedId)
+	else if (backDir.entrySelectedId > entryPrintCount-2 && count > 0 && backDir.entryOffsetId + entryPrintCount-2 < backDir.entrySelectedId)
 	{
-		backDir.entryOffsetId = (backDir.entrySelectedId < backDir.entry.entryCount-1 ?
-			backDir.entrySelectedId+1 : backDir.entrySelectedId) - entryPrintCount+1;
+		backDir.entryOffsetId = backDir.entrySelectedId - entryPrintCount + (backDir.entrySelectedId < backDir.entry.entryCount-1 ? 2 : 1);
 	}
 }
 

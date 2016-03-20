@@ -19,7 +19,7 @@ typedef struct fsStackNode
 } fsStackNode;
 
 /// A stack for fsDir.
-typedef struct
+typedef struct fsStack
 {
 	struct fsStackNode* last;
 } fsStack;
@@ -41,7 +41,7 @@ Result fsStackPush(fsStack* stack, s16 offsetId, s16 selectedId);
 Result fsStackPop(fsStack* stack, s16* offsetId, s16* selectedId);
 
 /// The directory entry to read from, inherits from fsEntry.
-typedef struct
+typedef struct fsDir
 {
 	fsEntry entry;			///< The mother fsEntry.
 	fsEntry* entrySelected;	///< The current entry selection.
