@@ -18,6 +18,7 @@ typedef enum {
 	STATE_ERROR,		///< Error
 	STATE_BROWSE,		///< Browse
 	STATE_BACKUP,		///< Backup
+	STATE_BACKUP_KEY,	///< Backup Rename
 } State;
 
 static State state;
@@ -107,7 +108,7 @@ int main(void)
 		consoleLog("\nCouldn't initialize the FS module!\n");
 		consoleLog("Have you selected a title?\n");
 		consoleLog("Error code: 0x%lx\n", ret);
-		// state = STATE_ERROR;
+		// state = STATE_ERROR; // TODO: Remove out of Citra
 	}
 
 	ret = saveInit();
@@ -115,7 +116,7 @@ int main(void)
 	{
 		consoleLog("\nCouldn't initialize the Save module!\n");
 		consoleLog("Error code: 0x%lx\n", ret);
-		// state = BACKUP_ERROR;
+		// state = STATE_ERROR; // TODO: Remove out of Citra
 	}
 
 	ret = saveGetTitleId(&titleid);
@@ -123,12 +124,13 @@ int main(void)
 	{
 		consoleLog("\nCouldn't get the title id of the game!\n");
 		consoleLog("Error code: 0x%lx\n", ret);
-		// state = BACKUP_ERROR;
+		// state = STATE_ERROR; // TODO: Remove out of Citra
 	}
 
 	fsDirInit();
-	// fsBackInit(titleid);
+	fsBackInit(titleid);
 	switchState(&state);
+	consoleSelectNew(&consoleLog);
 
 	drawHelp();
 
@@ -243,6 +245,15 @@ int main(void)
 					fsBackPrintSave();
 				}
 
+				if (kDown & KEY_B)
+				{
+					state = STATE_BACKUP_KEY;
+
+					// TODO: setKeyboardString
+
+					consoleSelectNew(&logConsole);
+				}
+
 				if (kDown & KEY_X)
 				{
 					ret = fsBackDelete();
@@ -295,6 +306,27 @@ int main(void)
 
 				break;
 			}
+			case STATE_BACKUP_KEY:
+			{
+				// TODO: updateKeyboard
+
+				if (kDown & KEY_A)
+				{
+					state = STATE_BACKUP;
+
+					// TODO: getKeyboardString
+
+					drawBackup();
+				}
+
+				if (kDown & KEY_B)
+				{
+					state = STATE_BACKUP;
+					drawBackup();
+				}
+
+				break;
+			}
 			case STATE_ERROR:
 			{
 				consoleLog("\nAn error has occured...\n");
@@ -310,13 +342,13 @@ int main(void)
 			if (kDown & KEY_L)
 			{
 				// TODO: Prev
-				// switchState(&state); // TODO: Uncomment
+				switchState(&state);
 			}
 
 			if (kDown & KEY_R)
 			{
 				// TODO: Next
-				// switchState(&state); // TODO: Uncomment
+				switchState(&state);
 			}
 
 			if (kDown & KEY_SELECT)
@@ -333,7 +365,7 @@ int main(void)
 	}
 
 	fsDirExit();
-	// fsBackExit();
+	fsBackExit();
 	FS_Exit();
 	{
 		hidScanInput();
@@ -345,7 +377,7 @@ int main(void)
 			Result ret = saveRemoveSecureValue(titleid, mediaType, &out);
 			if (R_FAILED(ret))
 			{
-				consoleSelect(&consoleLog);
+				consoleSelect(&logConsole);
 				printf("\nSecure value not removed.\n");
 				printf("It might already be unitialized.\n");
 				printf("Error code: 0x%lx (%i)\n", ret, out);
