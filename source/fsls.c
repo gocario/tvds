@@ -12,6 +12,24 @@
 // #define r(format, args...) consoleLog(format, ##args)
 #define r(format, args...)
 
+static inline u16 chr16upr(u16 chr)
+{
+	return (chr >= 'a' && chr <= 'z' ? chr - 'a' + 'A' : chr);
+}
+
+static inline u16 chr16acmp(u16 chr1, u16 chr2)
+{
+	return chr16upr(chr1) - chr16upr(chr2);
+}
+
+static s32 str16acmp(const u16* str1, const u16* str2)
+{
+	if (!str1 || !str2) return 0;
+	u16 ii;
+	for (ii = 0; str1[ii] && str2[ii] && chr16acmp(str1[ii], str2[ii]); ii++);
+	return chr16acmp(str1[ii], str2[ii]);
+}
+
 bool fsFileExists(const u16* path, const FS_Archive* archive)
 {
 	if (!path || !archive) return -1;
@@ -220,8 +238,7 @@ Result fsScanDir(fsEntry* dir, const FS_Archive* archive, bool rec)
 							}
 						}
 						// Else if it is a bigger alpha string.
-						else if (str16cmp(entry->name16, tmpNextEntry->name16) < 0)
-						
+						else if (str16acmp(entry->name16, tmpNextEntry->name16) < 0)
 						{
 							if (tmpNextEntry == dir->firstEntry)
 							{
